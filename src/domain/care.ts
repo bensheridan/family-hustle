@@ -123,6 +123,35 @@ export function handoversBetween(
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
+/** Where every child is on one day. The calendar shades days with this —
+ *  care is a background state, not an event that happens every morning. */
+export function careOnDate(
+  schedules: CareSchedule[],
+  date: ISODate,
+): { childId: Id; householdId: Id }[] {
+  return schedules
+    .map((s) => {
+      const householdId = householdOn(s, date);
+      return householdId ? { childId: s.childId, householdId } : null;
+    })
+    .filter((x): x is { childId: Id; householdId: Id } => x !== null);
+}
+
+export function careBetween(
+  schedules: CareSchedule[],
+  from: ISODate,
+  to: ISODate,
+): Map<ISODate, { childId: Id; householdId: Id }[]> {
+  const map = new Map<ISODate, { childId: Id; householdId: Id }[]>();
+  let cursor = from;
+  while (cursor <= to) {
+    const row = careOnDate(schedules, cursor);
+    if (row.length > 0) map.set(cursor, row);
+    cursor = addDays(cursor, 1);
+  }
+  return map;
+}
+
 export function nextHandover(
   schedule: CareSchedule,
   from: ISODate,

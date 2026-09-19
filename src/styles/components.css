@@ -205,8 +205,9 @@
   justify-content: flex-start;
   padding-top: 6px;
   gap: 4px;
-  background: transparent;
-  transition: background 0.14s ease;
+  /* care shading — set per cell from the schedule */
+  background: var(--care-tint, transparent);
+  transition: background 0.14s ease, box-shadow 0.14s ease;
 }
 
 .month__cell[data-outside='true'] {
@@ -219,7 +220,6 @@
 }
 
 .month__cell[data-selected='true'] {
-  background: var(--surface);
   box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 
@@ -964,4 +964,41 @@
     margin-right: auto;
     width: 100%;
   }
+}
+
+/* care as the shade of a day, from user testing: it is a background state,
+   not an event that happens every morning */
+
+.weekday__head {
+  border-radius: var(--r-sm);
+  padding: 4px 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  background: var(--care-tint, transparent);
+}
+
+.weekday__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.caredaylabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 560;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.caredaylabel__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

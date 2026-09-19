@@ -131,6 +131,11 @@ schedule to adjust.
   build the fortnight by hand. Set per child, so siblings can differ.
 - **one-off changes** — tap a child on any calendar day to move just that day.
   The pattern carries on untouched, and the day is marked as changed.
+- **shading, not events** — care is the colour of a day, not a row sitting on
+  it. Month cells take a wash of the household's colour, split diagonally when
+  siblings are in different places; week day-headers carry a quiet "Otis at
+  Theo's" line. Only actual handovers get a row, because a handover is a real
+  thing someone has to drive to.
 - **handovers** — derived from the schedule and shown as calendar rows, with
   children moving the same way on the same day grouped into one row.
 - **household visibility** — entries default to both households. Anything
@@ -138,10 +143,17 @@ schedule to adjust.
   the other household shows you exactly what they would see. This is a model,
   not enforcement: without accounts there is nothing to enforce it against.
 
+Shared care today assumes one family across two households. A co-parent with
+their own Family hustle is a different problem, written up in
+[docs/co-parent-access.md](docs/co-parent-access.md) — including why the
+current default of "both households see it" is backwards for that case.
+
 ## Where to go next
 
 - real accounts and sync, which is what turns the household visibility model
   into actual permissions rather than a preview
+- co-parent access (phase 7) — see the design note above; it needs accounts
+  first
 - handover detail — time and place, which the schedule does not carry yet
 - the intelligence in phase 6 — schedule conflicts, roster-aware planning,
   "Theo is on nights, who is doing pickup?" as a real suggestion

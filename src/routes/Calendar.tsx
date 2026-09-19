@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../state/store';
 import {
@@ -19,8 +19,14 @@ import { CATEGORIES, colourVar } from '../domain/categories';
 import { OccurrenceRow } from '../components/OccurrenceRow';
 import { EntrySheet } from '../components/EntrySheet';
 import { Chip, Empty, Segmented } from '../components/ui';
-import { CareDaySheet, HandoverRows, WhosGotTheKids } from '../components/CareBits';
-import { filterForHousehold, handoversBetween } from '../domain/care';
+import {
+  CareDayLabel,
+  CareDaySheet,
+  HandoverRows,
+  WhosGotTheKids,
+  careTint,
+} from '../components/CareBits';
+import { careBetween, filterForHousehold, handoversBetween } from '../domain/care';
 import type { Handover } from '../domain/care';
 import type { Category, Id, ISODate, Occurrence } from '../types';
 
@@ -88,6 +94,22 @@ export function CalendarPage() {
   }, [careEnabled, hidden, state.careSchedules, range.from, range.to, person]);
 
   const handoversOn = (d: ISODate) => handovers.get(d) ?? [];
+
+  // Care shows as the shade of the day rather than a row on it, so a glance
+  // at the month answers "who has them that week" without reading anything.
+  const shades = useMemo(() => {
+    const map = new Map<ISODate, string | undefined>();
+    if (!careEnabled || hidden.includes('sharedCare')) return map;
+    const care = careBetween(state.careSchedules, range.from, range.to);
+    for (const [date, row] of care) {
+      const relevant = person === 'everyone' ? row : row.filter((r) => r.childId === person);
+      const colours = relevant
+        .map((r) => state.households.find((h) => h.id === r.householdId)?.colour)
+        .filter((c): c is NonNullable<typeof c> => Boolean(c));
+      map.set(date, careTint(colours));
+    }
+    return map;
+  }, [careEnabled, hidden, state.careSchedules, state.households, range.from, range.to, person]);
 
   const step = (dir: number) => {
     if (view === 'month') setCursor(addMonths(cursor, dir));
@@ -170,6 +192,7 @@ export function CalendarPage() {
           cursor={cursor}
           byDate={byDate}
           handovers={handovers}
+          shades={shades}
           selected={selected}
           onSelect={setSelected}
           mondayFirst={state.settings.weekStartsMonday}
@@ -203,9 +226,12 @@ export function CalendarPage() {
         <section className="section">
           {daysBetween(range.from, range.to).map((d) => (
             <div key={d} className="weekday">
-              <div className="weekday__head">
+              <div className="weekday__head" style={{ '--care-tint': shades.get(d) ?? 'transparent' } as CSSProperties}>
                 <span>{relativeDay(d)}</span>
-                {d === today() && <span className="weekday__today">today</span>}
+                <span className="weekday__right">
+                  {careEnabled && <CareDayLabel date={d} filterChildId={person} />}
+                  {d === today() && <span className="weekday__today">today</span>}
+                </span>
               </div>
               <div className="card">
                 <HandoverRows handovers={handoversOn(d)} />
@@ -285,6 +311,7 @@ function MonthView({
   cursor,
   byDate,
   handovers,
+  shades,
   selected,
   onSelect,
   mondayFirst,
@@ -292,6 +319,7 @@ function MonthView({
   cursor: ISODate;
   byDate: Map<ISODate, Occurrence[]>;
   handovers: Map<ISODate, Handover[]>;
+  shades: Map<ISODate, string | undefined>;
   selected: ISODate;
   onSelect: (d: ISODate) => void;
   mondayFirst: boolean;
@@ -322,6 +350,7 @@ function MonthView({
               data-outside={outside}
               data-today={d === now}
               data-selected={d === selected}
+              style={{ '--care-tint': shades.get(d) ?? 'transparent' } as CSSProperties}
               onClick={() => onSelect(d)}
             >
               <span className="month__num">{Number(d.slice(8, 10))}</span>

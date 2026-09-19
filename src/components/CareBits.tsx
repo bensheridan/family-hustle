@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Handover } from '../domain/care';
 import {
+  careOnDate,
   handoverLabel,
   handoverOn,
   householdOn,
@@ -13,6 +14,26 @@ import { dayName, fullDate, today } from '../lib/date';
 import { useStore } from '../state/store';
 import { Avatar, Chip, Sheet } from './ui';
 import type { Household, Id, ISODate } from '../types';
+
+/** The shade for one day.
+ *
+ * From user testing: care should read as the colour of the day, not as an
+ * event sitting on it. One household → a flat wash. Children in different
+ * places → hard-stop bands, so a split day looks split.
+ */
+export function careTint(colours: string[], strength = 16): string | undefined {
+  if (colours.length === 0) return undefined;
+  const wash = (c: string) => `color-mix(in srgb, ${colourVar(c)} ${strength}%, transparent)`;
+
+  const distinct = [...new Set(colours)];
+  if (distinct.length === 1) return wash(distinct[0]);
+
+  const step = 100 / distinct.length;
+  const stops = distinct
+    .map((c, i) => `${wash(c)} ${i * step}% ${(i + 1) * step}%`)
+    .join(', ');
+  return `linear-gradient(135deg, ${stops})`;
+}
 
 export function HouseholdDot({ household, size = 10 }: { household: Household; size?: number }) {
   return (
@@ -96,6 +117,53 @@ export function WhosGotTheKids({
         </div>
       ))}
     </div>
+  );
+}
+
+/** 'at Theo’s' / 'Otis at Theo’s, Juno at Nadia’s' — a quiet line in a day
+ *  header, not a row in the day's list. */
+export function CareDayLabel({
+  date,
+  filterChildId,
+}: {
+  date: ISODate;
+  filterChildId?: Id | 'everyone';
+}) {
+  const { state, householdById, personById, careEnabled } = useStore();
+  if (!careEnabled) return null;
+
+  const rows = careOnDate(state.careSchedules, date).filter(
+    (r) => !filterChildId || filterChildId === 'everyone' || r.childId === filterChildId,
+  );
+  if (rows.length === 0) return null;
+
+  const byHousehold = new Map<Id, string[]>();
+  for (const r of rows) {
+    const name = personById(r.childId)?.name;
+    if (!name) continue;
+    const list = byHousehold.get(r.householdId);
+    if (list) list.push(name);
+    else byHousehold.set(r.householdId, [name]);
+  }
+  if (byHousehold.size === 0) return null;
+
+  // Everyone in one place is the common case, and it deserves the short line.
+  const single = byHousehold.size === 1;
+
+  return (
+    <span className="caredaylabel">
+      {[...byHousehold.entries()].map(([householdId, names]) => {
+        const household = householdById(householdId);
+        if (!household) return null;
+        return (
+          <span key={householdId} className="caredaylabel__part">
+            <HouseholdDot household={household} size={7} />
+            {single && rows.length > 1 ? '' : `${joinNames(names)} `}
+            at {household.name}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 

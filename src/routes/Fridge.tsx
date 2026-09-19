@@ -12,6 +12,7 @@ import {
   today,
 } from '../lib/date';
 import { expand, groupByDate, timeLabel } from '../domain/occurrences';
+import { handoversBetween, householdOn, scheduleFor } from '../domain/care';
 import { colourVar } from '../domain/categories';
 import { Toggle } from '../components/ui';
 import type { Category, ISODate, Occurrence } from '../types';
@@ -22,7 +23,7 @@ import type { Category, ISODate, Occurrence } from '../types';
  * Monday–Sunday grid, real dates, room to read it from across the kitchen.
  */
 export function Fridge() {
-  const { state, personById } = useStore();
+  const { state, personById, householdById, children, careEnabled } = useStore();
   const [params] = useSearchParams();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -53,6 +54,32 @@ export function Fridge() {
     const entries = state.entries.filter((e) => show[e.category]);
     return groupByDate(expand(entries, grid[0], grid[41], { includeTails: false }));
   }, [state.entries, show, grid]);
+
+  // Where each child is, per day — the one piece of shared care that earns
+  // its place on a printed calendar.
+  const careByDate = useMemo(() => {
+    const map = new Map<ISODate, { name: string; colour: string; swap: boolean }[]>();
+    if (!careEnabled || !show.sharedCare) return map;
+    const swaps = new Set(
+      handoversBetween(state.careSchedules, grid[0], grid[41]).map((h) => `${h.childId}@${h.date}`),
+    );
+    for (const d of grid) {
+      const row: { name: string; colour: string; swap: boolean }[] = [];
+      for (const child of children) {
+        const schedule = scheduleFor(state.careSchedules, child.id);
+        if (!schedule) continue;
+        const household = householdById(householdOn(schedule, d));
+        if (!household) continue;
+        row.push({
+          name: child.name,
+          colour: colourVar(household.colour),
+          swap: swaps.has(`${child.id}@${d}`),
+        });
+      }
+      if (row.length > 0) map.set(d, row);
+    }
+    return map;
+  }, [careEnabled, show.sharedCare, state.careSchedules, grid, children, householdById]);
 
   const heads = state.settings.weekStartsMonday
     ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -129,6 +156,18 @@ export function Fridge() {
                       {p.name}
                     </span>
                   ))}
+                {careEnabled &&
+                  show.sharedCare &&
+                  state.households.map((h) => (
+                    <span key={h.id} className="fridge-sheet__keyitem">
+                      <span
+                        className="fridge-care"
+                        style={{ background: colourVar(h.colour) }}
+                        aria-hidden
+                      />
+                      {h.name}
+                    </span>
+                  ))}
               </div>
             </div>
 
@@ -145,6 +184,21 @@ export function Fridge() {
                 return (
                   <div key={d} className="fridge-cell" data-outside={outside}>
                     <div className="fridge-cell__num">{Number(d.slice(8, 10))}</div>
+                    {careByDate.has(d) && (
+                      <div className="fridge-cell__care">
+                        {careByDate.get(d)!.map((c) => (
+                          <span
+                            key={c.name}
+                            className="fridge-care"
+                            style={{ background: c.colour }}
+                            title={c.name}
+                          >
+                            {c.name.slice(0, 1)}
+                            {c.swap ? '⇄' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="fridge-cell__items">
                       {occs.slice(0, 5).map((o) => (
                         <FridgeItem

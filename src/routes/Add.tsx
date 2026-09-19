@@ -7,6 +7,7 @@ import { crossesMidnight } from '../domain/occurrences';
 import { dayName, formatTime, today, addDays } from '../lib/date';
 import type {
   Category,
+  HouseholdVisibility,
   Entry,
   EventEntry,
   Id,
@@ -107,6 +108,7 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
   const [repeat, setRepeat] = useState<'none' | 'weekly' | 'daily'>('none');
   const [visibleToAll, setVisibleToAll] = useState(true);
   const [prep, setPrep] = useState('');
+  const [households, setHouseholds] = useState<HouseholdVisibility>('both');
 
   const categories: Category[] = state.settings.sharedCareEnabled
     ? ['activity', 'school', 'appointment', 'family', 'sharedCare']
@@ -129,6 +131,7 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
       category,
       personIds: who.length > 0 ? who : state.people.map((p) => p.id),
       visibility,
+      householdVisibility: households,
       location: where.trim() || undefined,
       prepNote: prep.trim() || undefined,
       startDate: date,
@@ -245,6 +248,8 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
           ]}
         />
       </FieldGroup>
+
+      <HouseholdField value={households} onChange={setHouseholds} />
 
       <Field label="anything to remember?" hint="shows up as a heads up the day before.">
         <input
@@ -449,6 +454,7 @@ function TaskForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
   const [date, setDate] = useState(today());
   const [time, setTime] = useState(kind === 'reminder' ? '18:00' : '');
   const [weekly, setWeekly] = useState(false);
+  const [households, setHouseholds] = useState<HouseholdVisibility>('both');
 
   const save = () => {
     const entry: TaskEntry = {
@@ -458,6 +464,7 @@ function TaskForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
       category: 'task',
       personIds: who.length > 0 ? who : state.people.map((p) => p.id),
       visibility: 'everyone',
+      householdVisibility: households,
       dueDate: date,
       dueTime: time || undefined,
       doneDates: [],
@@ -502,6 +509,8 @@ function TaskForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
           </Chip>
         </div>
       </FieldGroup>
+
+      <HouseholdField value={households} onChange={setHouseholds} />
     </FormShell>
   );
 }
@@ -567,6 +576,41 @@ function PeoplePicker({
             {p.name}
           </Chip>
         ))}
+      </div>
+    </FieldGroup>
+  );
+}
+
+/** Only appears for families using shared care, and defaults to both —
+ *  the app never quietly hides a child's life from the other household. */
+function HouseholdField({
+  value,
+  onChange,
+}: {
+  value: HouseholdVisibility;
+  onChange: (v: HouseholdVisibility) => void;
+}) {
+  const { careEnabled, households, state } = useStore();
+  if (!careEnabled || households.length < 2) return null;
+  const home = state.settings.homeHouseholdId ?? households[0].id;
+  const homeName = households.find((h) => h.id === home)?.name ?? 'this household';
+
+  return (
+    <FieldGroup
+      label="which households?"
+      hint="school and activities usually belong to both. the things that are only your business don't have to be."
+    >
+      <div className="choices">
+        <Chip outline active={value === 'both'} onClick={() => onChange('both')}>
+          both households
+        </Chip>
+        <Chip
+          outline
+          active={value !== 'both'}
+          onClick={() => onChange({ household: home })}
+        >
+          just {homeName}
+        </Chip>
       </div>
     </FieldGroup>
   );

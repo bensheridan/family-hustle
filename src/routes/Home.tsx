@@ -7,34 +7,43 @@ import { availabilityColour, availabilityFor, headsUpFor } from '../domain/avail
 import { OccurrenceRow } from '../components/OccurrenceRow';
 import { Avatar, Empty, SectionHead } from '../components/ui';
 import { EntrySheet } from '../components/EntrySheet';
+import { WhosGotTheKids } from '../components/CareBits';
+import { filterForHousehold } from '../domain/care';
 import type { Occurrence } from '../types';
 
 /** The family command centre: what is happening today, what is coming up. */
 export function Home() {
-  const { state, workers, personById } = useStore();
+  const { state, workers, personById, careEnabled } = useStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState<Occurrence | null>(null);
 
   const day = today();
   const weekEnd = addDays(day, 7);
 
+  // When previewing another household, the home screen has to be their home
+  // screen — otherwise the preview proves nothing.
+  const entries = useMemo(
+    () => filterForHousehold(state.entries, state.settings),
+    [state.entries, state.settings],
+  );
+
   const todays = useMemo(
-    () => expand(state.entries, day, day).filter((o) => !o.done),
-    [state.entries, day],
+    () => expand(entries, day, day).filter((o) => !o.done),
+    [entries, day],
   );
   const upcoming = useMemo(
-    () => expand(state.entries, addDays(day, 1), weekEnd).filter((o) => !o.isTail && !o.done),
-    [state.entries, day, weekEnd],
+    () => expand(entries, addDays(day, 1), weekEnd).filter((o) => !o.isTail && !o.done),
+    [entries, day, weekEnd],
   );
   const headsUp = useMemo(
     () => [
-      ...headsUpFor(state.entries, state.people, day),
-      ...headsUpFor(state.entries, state.people, addDays(day, 1)).map((h) => ({
+      ...headsUpFor(entries, state.people, day),
+      ...headsUpFor(entries, state.people, addDays(day, 1)).map((h) => ({
         ...h,
         text: `tomorrow — ${h.text}`,
       })),
     ],
-    [state.entries, state.people, day],
+    [entries, state.people, day],
   );
 
   const byDay = groupByDate(upcoming);
@@ -63,7 +72,7 @@ export function Home() {
             {state.people
               .filter((p) => p.role === 'adult')
               .map((p) => {
-                const a = availabilityFor(state.entries, p.id, day);
+                const a = availabilityFor(entries, p.id, day);
                 return (
                   <div key={p.id} className="availability__item">
                     <Avatar person={p} size="sm" />
@@ -80,6 +89,20 @@ export function Home() {
                 );
               })}
           </div>
+        </section>
+      )}
+
+      {careEnabled && (
+        <section className="section">
+          <SectionHead
+            title="who’s got the kids"
+            action={
+              <Link className="section__link" to="/shared-care">
+                schedule →
+              </Link>
+            }
+          />
+          <WhosGotTheKids date={day} />
         </section>
       )}
 

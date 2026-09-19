@@ -40,7 +40,9 @@ export interface Person {
 
 export interface Household {
   id: Id;
+  /** What the family calls it — "Mum's", "Dad's", "Home". A proper noun. */
   name: string;
+  colour: PersonColour;
 }
 
 /** How the family is set up. Never defaults to shared care. */
@@ -53,6 +55,30 @@ export interface Settings {
   sharedCareEnabled: boolean;
   petsEnabled: boolean;
   weekStartsMonday: boolean;
+  /** The household this device belongs to. */
+  homeHouseholdId?: Id;
+  /** Temporarily viewing the app as another household, to check what they
+   *  can see. Never changes data — only what is shown. */
+  viewingAsHouseholdId?: Id;
+}
+
+/** Where a child is, day by day.
+ *
+ * A cycle of household ids repeating from an anchor Monday, which covers
+ * week on/week off, 2-2-3, alternating weekends and anything hand-built —
+ * the same shape as a work roster, because it is the same problem.
+ * Overrides handle the swapped weekend without touching the pattern.
+ */
+export interface CareSchedule {
+  childId: Id;
+  /** one household id per day of the cycle */
+  cycle: Id[];
+  /** always a Monday, so weekend patterns line up */
+  anchorDate: ISODate;
+  /** which preset built the cycle, for showing it back to the family */
+  patternId: string;
+  /** one-off changes: ISO date → household id */
+  overrides: Record<ISODate, Id>;
 }
 
 export type Category =
@@ -68,6 +94,10 @@ export type EntryType = 'event' | 'shift' | 'task';
 
 /** Who can see it. An event can belong to one person and still be family-visible. */
 export type Visibility = 'everyone' | { only: Id[] };
+
+/** Which households can see an entry. Undefined means both — nothing is
+ *  hidden from a family that isn't using shared care. */
+export type HouseholdVisibility = 'both' | { household: Id };
 
 export type Recurrence =
   | { kind: 'none' }
@@ -87,6 +117,8 @@ interface EntryBase {
   category: Category;
   personIds: Id[];
   visibility: Visibility;
+  /** Only consulted when shared care is on. */
+  householdVisibility?: HouseholdVisibility;
   location?: string;
   /** The "don't forget the gi 🥋" line. Drives the heads-up card. */
   prepNote?: string;
@@ -172,6 +204,8 @@ export interface State {
   households: Household[];
   people: Person[];
   entries: Entry[];
+  /** One per child, only when shared care is on. */
+  careSchedules: CareSchedule[];
   /** Powers "repeat last" — the fastest way to add the thing you always add. */
   lastTemplate?: Template;
 }

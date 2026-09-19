@@ -2,18 +2,26 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { expand } from '../domain/occurrences';
-import { addDays, relativeDay, shortDate, today } from '../lib/date';
+import { addDays, dayName, relativeDay, shortDate, today } from '../lib/date';
 import { Avatar, Empty, SectionHead } from '../components/ui';
 import { OccurrenceRow } from '../components/OccurrenceRow';
 import { EntrySheet } from '../components/EntrySheet';
-import { CATEGORIES } from '../domain/categories';
+import { CATEGORIES, colourVar } from '../domain/categories';
+import {
+  filterForHousehold,
+  handoverLabel,
+  householdOn,
+  nextHandover,
+  scheduleFor,
+  stretchEnd,
+} from '../domain/care';
 import type { Category, Occurrence } from '../types';
 
 /** A child's calendar is not something you maintain — it falls out of the
  *  events already assigned to them. */
 export function KidProfile() {
   const { id } = useParams();
-  const { state, personById } = useStore();
+  const { state, personById, householdById, households, careEnabled } = useStore();
   const [open, setOpen] = useState<Occurrence | null>(null);
   const child = id ? personById(id) : undefined;
   const day = today();
@@ -31,7 +39,10 @@ export function KidProfile() {
     );
   }
 
-  const theirs = state.entries.filter((e) => e.personIds.includes(child.id));
+  const theirs = filterForHousehold(state.entries, state.settings).filter((e) =>
+    e.personIds.includes(child.id),
+  );
+  const schedule = careEnabled ? scheduleFor(state.careSchedules, child.id) : undefined;
   const upcoming = expand(theirs, day, addDays(day, 60)).filter((o) => !o.isTail && !o.done);
 
   const groups: { category: Category; occs: Occurrence[] }[] = (
@@ -72,6 +83,43 @@ export function KidProfile() {
           </div>
         </div>
       </div>
+
+      {schedule && (
+        <section className="section">
+          <SectionHead
+            title="care schedule"
+            action={
+              <Link className="section__link" to="/shared-care">
+                change →
+              </Link>
+            }
+          />
+          <div className="card card--pad">
+            <div className="carehero__where">
+              at{' '}
+              <strong>
+                <span
+                  className="dot"
+                  style={{
+                    background: colourVar(
+                      householdById(householdOn(schedule, day))?.colour ?? 'purple',
+                    ),
+                    marginRight: 6,
+                  }}
+                />
+                {householdById(householdOn(schedule, day))?.name ?? 'unscheduled'}
+              </strong>
+              {stretchEnd(schedule, day) !== day && <> until {dayName(stretchEnd(schedule, day))}</>}
+            </div>
+            <div className="muted" style={{ fontSize: 13.5, marginTop: 4 }}>
+              {(() => {
+                const next = nextHandover(schedule, day);
+                return next ? handoverLabel(next, households, day) : 'no swap coming up';
+              })()}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <SectionHead title="coming up" />

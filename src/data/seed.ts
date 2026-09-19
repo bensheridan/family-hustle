@@ -231,9 +231,10 @@ export function seedState(): State {
       petsEnabled: false,
       weekStartsMonday: true,
     },
-    households: [{ id: 'h-1', name: 'Home' }],
+    households: [{ id: 'h-1', name: 'Home', colour: 'purple' }],
     people,
     entries,
+    careSchedules: [],
   };
 }
 
@@ -247,8 +248,9 @@ export function blankState(): State {
       petsEnabled: false,
       weekStartsMonday: true,
     },
-    households: [{ id: 'h-1', name: 'Home' }],
+    households: [{ id: 'h-1', name: 'Home', colour: 'purple' }],
     people: [],
     entries: [],
+    careSchedules: [],
   };
 }

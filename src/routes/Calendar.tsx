@@ -19,18 +19,22 @@ import { CATEGORIES, colourVar } from '../domain/categories';
 import { OccurrenceRow } from '../components/OccurrenceRow';
 import { EntrySheet } from '../components/EntrySheet';
 import { Chip, Empty, Segmented } from '../components/ui';
+import { CareDaySheet, HandoverRows, WhosGotTheKids } from '../components/CareBits';
+import { filterForHousehold, handoversBetween } from '../domain/care';
+import type { Handover } from '../domain/care';
 import type { Category, Id, ISODate, Occurrence } from '../types';
 
 type View = 'month' | 'week' | 'day';
 
 export function CalendarPage() {
-  const { state, personById } = useStore();
+  const { state, personById, careEnabled } = useStore();
   const [view, setView] = useState<View>('month');
   const [cursor, setCursor] = useState<ISODate>(today());
   const [person, setPerson] = useState<Id | 'everyone'>('everyone');
   const [hidden, setHidden] = useState<Category[]>([]);
   const [open, setOpen] = useState<Occurrence | null>(null);
   const [selected, setSelected] = useState<ISODate>(today());
+  const [moving, setMoving] = useState<Id | null>(null);
 
   const sharedCare = state.settings.sharedCareEnabled;
 
@@ -55,16 +59,35 @@ export function CalendarPage() {
   }, [view, cursor, state.settings.weekStartsMonday]);
 
   const occurrences = useMemo(() => {
-    const filtered = state.entries.filter((e) => {
+    const visible = filterForHousehold(state.entries, state.settings);
+    const filtered = visible.filter((e) => {
       if (hidden.includes(e.category)) return false;
       if (!sharedCare && e.category === 'sharedCare') return false;
       if (person !== 'everyone' && !e.personIds.includes(person)) return false;
       return true;
     });
     return expand(filtered, range.from, range.to);
-  }, [state.entries, hidden, person, sharedCare, range.from, range.to]);
+  }, [state.entries, state.settings, hidden, person, sharedCare, range.from, range.to]);
 
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences]);
+
+  // Handovers are derived from the care schedules, never stored, so they can
+  // never drift out of sync with the pattern they came from.
+  const handovers = useMemo(() => {
+    if (!careEnabled || hidden.includes('sharedCare')) return new Map<ISODate, Handover[]>();
+    const all = handoversBetween(state.careSchedules, range.from, range.to).filter(
+      (h) => person === 'everyone' || h.childId === person,
+    );
+    const map = new Map<ISODate, Handover[]>();
+    for (const h of all) {
+      const list = map.get(h.date);
+      if (list) list.push(h);
+      else map.set(h.date, [h]);
+    }
+    return map;
+  }, [careEnabled, hidden, state.careSchedules, range.from, range.to, person]);
+
+  const handoversOn = (d: ISODate) => handovers.get(d) ?? [];
 
   const step = (dir: number) => {
     if (view === 'month') setCursor(addMonths(cursor, dir));
@@ -146,6 +169,7 @@ export function CalendarPage() {
         <MonthView
           cursor={cursor}
           byDate={byDate}
+          handovers={handovers}
           selected={selected}
           onSelect={setSelected}
           mondayFirst={state.settings.weekStartsMonday}
@@ -157,9 +181,15 @@ export function CalendarPage() {
           <div className="daygroup__head" style={{ marginBottom: 6 }}>
             {relativeDay(selected)}
           </div>
+          {careEnabled && (
+            <div style={{ marginBottom: 10 }}>
+              <WhosGotTheKids date={selected} onPick={(id) => setMoving(id)} />
+            </div>
+          )}
           <div className="card">
+            <HandoverRows handovers={handoversOn(selected)} />
             {(byDate.get(selected) ?? []).length === 0 ? (
-              <Empty>nothing on.</Empty>
+              handoversOn(selected).length === 0 && <Empty>nothing on.</Empty>
             ) : (
               byDate.get(selected)!.map((o) => (
                 <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
@@ -178,10 +208,13 @@ export function CalendarPage() {
                 {d === today() && <span className="weekday__today">today</span>}
               </div>
               <div className="card">
+                <HandoverRows handovers={handoversOn(d)} />
                 {(byDate.get(d) ?? []).length === 0 ? (
-                  <div className="row muted" style={{ fontSize: 14 }}>
-                    clear
-                  </div>
+                  handoversOn(d).length === 0 && (
+                    <div className="row muted" style={{ fontSize: 14 }}>
+                      clear
+                    </div>
+                  )
                 ) : (
                   byDate.get(d)!.map((o) => (
                     <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
@@ -195,9 +228,17 @@ export function CalendarPage() {
 
       {view === 'day' && (
         <section className="section">
+          {careEnabled && (
+            <div style={{ marginBottom: 10 }}>
+              <WhosGotTheKids date={cursor} onPick={(id) => setMoving(id)} />
+            </div>
+          )}
           <div className="card">
+            <HandoverRows handovers={handoversOn(cursor)} />
             {(byDate.get(cursor) ?? []).length === 0 ? (
-              <Empty icon="🌤">nothing on {relativeDay(cursor)}.</Empty>
+              handoversOn(cursor).length === 0 && (
+                <Empty icon="🌤">nothing on {relativeDay(cursor)}.</Empty>
+              )
             ) : (
               byDate.get(cursor)!.map((o) => (
                 <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
@@ -224,6 +265,13 @@ export function CalendarPage() {
       </div>
 
       {open && <EntrySheet occ={open} onClose={() => setOpen(null)} />}
+      {moving && (
+        <CareDaySheet
+          childId={moving}
+          date={view === 'day' ? cursor : selected}
+          onClose={() => setMoving(null)}
+        />
+      )}
       {person !== 'everyone' && (
         <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
           showing {personById(person)?.name} only.
@@ -236,12 +284,14 @@ export function CalendarPage() {
 function MonthView({
   cursor,
   byDate,
+  handovers,
   selected,
   onSelect,
   mondayFirst,
 }: {
   cursor: ISODate;
   byDate: Map<ISODate, Occurrence[]>;
+  handovers: Map<ISODate, Handover[]>;
   selected: ISODate;
   onSelect: (d: ISODate) => void;
   mondayFirst: boolean;
@@ -275,6 +325,11 @@ function MonthView({
               onClick={() => onSelect(d)}
             >
               <span className="month__num">{Number(d.slice(8, 10))}</span>
+              {(handovers.get(d)?.length ?? 0) > 0 && (
+                <span className="month__handover" title="handover" aria-hidden>
+                  ⇄
+                </span>
+              )}
               <span className="month__dots">
                 {occs.slice(0, 4).map((o) => {
                   const p = o.entry.personIds[0] ? personById(o.entry.personIds[0]) : undefined;

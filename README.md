@@ -33,12 +33,13 @@ npm run preview     # serve the build
 | 1 | onboarding, family members, household setup, home, calendar | done |
 | 2 | events, activities, appointments, school/daycare, tasks, reminders | done |
 | 3 | work profiles, shifts, overnight shifts, rosters and patterns | done |
+| 4 | households, care schedules, handovers, household visibility | done |
 | 5 | monthly fridge export — image, PDF, print | done |
-| 4 | multiple households, shared care, permissions, handovers | scaffolded only |
 | 6 | family-aware intelligence | first pass (heads up, availability) |
 
-Shared care exists as a setting and a category, and every screen already
-respects it, but the handover and permission screens are not built.
+Shared care is complete enough to use: patterns, per-day changes, handovers,
+two households and a visibility model. What it does not have is real accounts,
+so the second household is previewed rather than actually separate.
 
 ## The rules this code enforces
 
@@ -77,6 +78,14 @@ and shown separately in the detail sheet.
 its own black-on-white layout, a full Monday–Sunday grid, a person key, and a
 print stylesheet that hides the app and sizes the sheet to A4 landscape.
 
+**Shared care is a schedule, not a record.** Nothing logs who did what, counts
+nights, or keeps evidence — the brief is explicit that this must not feel like
+custody software. A care schedule is a cycle of household ids anchored to a
+Monday, which is the same shape as a work roster, so the calendar treats it as
+one more thing the family has on. Handovers are *derived* from that cycle
+rather than stored, so they can never drift out of sync with the pattern they
+came from. See `domain/care.ts`.
+
 ## How it is put together
 
 ```
@@ -86,11 +95,13 @@ src/
   domain/
     occurrences.ts         recurrence → dated occurrences; overnight logic
     availability.ts        shifts → who is actually around; heads-up lines
+    care.ts                care patterns, handovers, household visibility
     categories.ts          categories, shift types, impacts, colours
   state/store.tsx          useReducer + localStorage, with derived helpers
   data/seed.ts             the demo family, anchored to the current week
   components/              ui primitives, occurrence row, detail sheet, tabs
-  routes/                  onboarding, home, calendar, add, kids, work, more, fridge
+  routes/                  onboarding, home, calendar, add, kids, work,
+                           more, shared-care, fridge
   styles/                  tokens, global, components, print
 ```
 
@@ -105,14 +116,35 @@ Recurrence covers one-offs, daily, weekly, monthly-by-date, and rosters
 entry's start date. A single occurrence can be skipped without breaking the
 series.
 
+## Shared care
+
+Off by default, and invisible when off — no care card on home, no handover
+markers on the calendar, no shared care filter, nothing on the fridge sheet.
+Switching it off keeps the schedules, so turning it back on costs nothing.
+
+Switching it on sets the family up rather than handing them a blank screen: it
+creates a second household (named after the two adults, because "Nadia's" and
+"Theo's" is what the kids would say) and gives every child a week on / week off
+schedule to adjust.
+
+- **patterns** — week on/week off, 2-2-3, 3-4-4-3, alternating weekends, or
+  build the fortnight by hand. Set per child, so siblings can differ.
+- **one-off changes** — tap a child on any calendar day to move just that day.
+  The pattern carries on untouched, and the day is marked as changed.
+- **handovers** — derived from the schedule and shown as calendar rows, with
+  children moving the same way on the same day grouped into one row.
+- **household visibility** — entries default to both households. Anything
+  marked as one household's business is hidden from the other, and *viewing as*
+  the other household shows you exactly what they would see. This is a model,
+  not enforcement: without accounts there is nothing to enforce it against.
+
 ## Where to go next
 
-- shared care proper: households, parenting schedules, handover days, and the
-  permission model between them
+- real accounts and sync, which is what turns the household visibility model
+  into actual permissions rather than a preview
+- handover detail — time and place, which the schedule does not carry yet
 - the intelligence in phase 6 — schedule conflicts, roster-aware planning,
   "Theo is on nights, who is doing pickup?" as a real suggestion
-- persistence beyond one browser, which is the point at which this needs a
-  backend and real accounts
 - editing an existing entry (today you can skip an occurrence or delete the
   series, but not change one)
 

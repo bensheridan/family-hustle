@@ -8,7 +8,7 @@ import { dayName, fullDate } from '../lib/date';
 /** Detail for one dated thing. Shows ownership and visibility separately,
  *  because an event can belong to Otis and still be the whole family's problem. */
 export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => void }) {
-  const { dispatch, personById, state } = useStore();
+  const { dispatch, personById, careEnabled, households, householdById } = useStore();
   const entry = occ.entry;
   const owners = entry.personIds.map(personById).filter((p): p is Person => Boolean(p));
   const repeats = entry.recurrence.kind !== 'none';
@@ -57,6 +57,17 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           <div>{seenBy}</div>
         </div>
 
+        {careEnabled && households.length > 1 && (
+          <div className="detail__block">
+            <div className="detail__label">which households</div>
+            <div>
+              {!entry.householdVisibility || entry.householdVisibility === 'both'
+                ? 'both households'
+                : `just ${householdById(entry.householdVisibility.household)?.name ?? 'one household'}`}
+            </div>
+          </div>
+        )}
+
         {entry.type === 'shift' && entry.impacts.length > 0 && (
           <div className="detail__block">
             <div className="detail__label">what it means at home</div>
@@ -101,11 +112,7 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           </button>
         </div>
 
-        {state.settings.sharedCareEnabled && entry.category === 'sharedCare' && (
-          <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
-            shared care items are visible to both households.
-          </p>
-        )}
+
       </div>
     </Sheet>
   );

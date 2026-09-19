@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toPng } from 'html-to-image';
 import { useStore } from '../state/store';
@@ -12,9 +12,10 @@ import {
   today,
 } from '../lib/date';
 import { expand, groupByDate, timeLabel } from '../domain/occurrences';
-import { handoversBetween, householdOn, scheduleFor } from '../domain/care';
+import { careOnDate, handoverOn, scheduleFor } from '../domain/care';
 import { colourVar } from '../domain/categories';
 import { Toggle } from '../components/ui';
+import { careTint, joinNames } from '../components/CareBits';
 import type { Category, ISODate, Occurrence } from '../types';
 
 /** The fridge calendar.
@@ -55,31 +56,96 @@ export function Fridge() {
     return groupByDate(expand(entries, grid[0], grid[41], { includeTails: false }));
   }, [state.entries, show, grid]);
 
-  // Where each child is, per day — the one piece of shared care that earns
-  // its place on a printed calendar.
+  /* Care on paper.
+   *
+   * Shading carries the day-to-day state, the same as on screen. But a fridge
+   * calendar gets photocopied and read in bad light, so the colour cannot be
+   * the only signal: where a stretch begins, the household is named. After
+   * that the shade carries it until the next name appears. */
   const careByDate = useMemo(() => {
-    const map = new Map<ISODate, { name: string; colour: string; swap: boolean }[]>();
+    const map = new Map<ISODate, { tint?: string; labels: string[] }>();
     if (!careEnabled || !show.sharedCare) return map;
-    const swaps = new Set(
-      handoversBetween(state.careSchedules, grid[0], grid[41]).map((h) => `${h.childId}@${h.date}`),
-    );
-    for (const d of grid) {
-      const row: { name: string; colour: string; swap: boolean }[] = [];
-      for (const child of children) {
-        const schedule = scheduleFor(state.careSchedules, child.id);
-        if (!schedule) continue;
-        const household = householdById(householdOn(schedule, d));
-        if (!household) continue;
-        row.push({
-          name: child.name,
-          colour: colourVar(household.colour),
-          swap: swaps.has(`${child.id}@${d}`),
-        });
+
+    const scheduled = children
+      .map((c) => scheduleFor(state.careSchedules, c.id))
+      .filter((s): s is NonNullable<typeof s> => Boolean(s));
+    if (scheduled.length === 0) return map;
+
+    for (const [index, d] of grid.entries()) {
+      const row = careOnDate(state.careSchedules, d);
+      if (row.length === 0) continue;
+
+      const colours = row
+        .map((r) => householdById(r.householdId)?.colour)
+        .filter((c): c is NonNullable<typeof c> => Boolean(c));
+
+      // spill days from the neighbouring months stay paler
+      const outside = !isSameMonth(d, month);
+      const tint = careTint(colours, outside ? 8 : 15);
+
+      // who arrives where today
+      const arriving = new Map<string, string[]>();
+      for (const schedule of scheduled) {
+        const h = handoverOn(schedule, d);
+        if (!h) continue;
+        const name = personById(schedule.childId)?.name;
+        if (!name) continue;
+        const list = arriving.get(h.to);
+        if (list) list.push(name);
+        else arriving.set(h.to, [name]);
       }
-      if (row.length > 0) map.set(d, row);
+
+      const labels: string[] = [];
+      const moved = new Set([...arriving.values()].flat());
+
+      // handovers are the news, so they lead
+      for (const [householdId, names] of arriving) {
+        const household = householdById(householdId);
+        if (!household) continue;
+        labels.push(
+          names.length === scheduled.length
+            ? `→ ${household.name}`
+            : `${joinNames(names)} → ${household.name}`,
+        );
+      }
+
+      /* Every week also starts with the household named. Two tints of the
+       * same lightness are the same grey once this is photocopied, so a
+       * reader in black and white needs an anchor in every row — including
+       * for the children who did not move that day. */
+      if (index % 7 === 0) {
+        const staying = new Map<string, string[]>();
+        for (const r of row) {
+          const name = personById(r.childId)?.name;
+          if (!name || moved.has(name)) continue;
+          const list = staying.get(r.householdId);
+          if (list) list.push(name);
+          else staying.set(r.householdId, [name]);
+        }
+        for (const [householdId, names] of staying) {
+          const household = householdById(householdId);
+          if (!household) continue;
+          labels.push(
+            names.length === scheduled.length
+              ? `at ${household.name}`
+              : `${joinNames(names)} at ${household.name}`,
+          );
+        }
+      }
+
+      map.set(d, { tint, labels });
     }
     return map;
-  }, [careEnabled, show.sharedCare, state.careSchedules, grid, children, householdById]);
+  }, [
+    careEnabled,
+    show.sharedCare,
+    state.careSchedules,
+    grid,
+    month,
+    children,
+    householdById,
+    personById,
+  ]);
 
   const heads = state.settings.weekStartsMonday
     ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -161,8 +227,11 @@ export function Fridge() {
                   state.households.map((h) => (
                     <span key={h.id} className="fridge-sheet__keyitem">
                       <span
-                        className="fridge-care"
-                        style={{ background: colourVar(h.colour) }}
+                        className="fridge-sheet__swatch"
+                        style={{
+                          background: `color-mix(in srgb, ${colourVar(h.colour)} 15%, #fff)`,
+                          borderColor: colourVar(h.colour),
+                        }}
                         aria-hidden
                       />
                       {h.name}
@@ -181,21 +250,19 @@ export function Fridge() {
               {grid.map((d) => {
                 const occs = byDate.get(d) ?? [];
                 const outside = !isSameMonth(d, month);
+                const care = careByDate.get(d);
                 return (
-                  <div key={d} className="fridge-cell" data-outside={outside}>
+                  <div
+                    key={d}
+                    className="fridge-cell"
+                    data-outside={outside}
+                    style={{ '--care-tint': care?.tint ?? 'transparent' } as CSSProperties}
+                  >
                     <div className="fridge-cell__num">{Number(d.slice(8, 10))}</div>
-                    {careByDate.has(d) && (
-                      <div className="fridge-cell__care">
-                        {careByDate.get(d)!.map((c) => (
-                          <span
-                            key={c.name}
-                            className="fridge-care"
-                            style={{ background: c.colour }}
-                            title={c.name}
-                          >
-                            {c.name.slice(0, 1)}
-                            {c.swap ? '⇄' : ''}
-                          </span>
+                    {care && care.labels.length > 0 && (
+                      <div className="fridge-cell__carelabel">
+                        {care.labels.map((l) => (
+                          <span key={l}>{l}</span>
                         ))}
                       </div>
                     )}

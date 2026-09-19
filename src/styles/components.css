@@ -638,6 +638,17 @@
    readable from the other side of the kitchen. It ignores dark mode. */
 
 .fridge-sheet {
+  /* Paper is always light. Pinning these here means a PNG exported from the
+     app in dark mode still prints with the colours the key describes. */
+  --p-purple: #7c5cd6;
+  --p-blue: #2f7fe0;
+  --p-orange: #e07b2f;
+  --p-green: #2fa26b;
+  --p-pink: #d6457e;
+  --p-teal: #1f9b9b;
+  --p-amber: #c08a10;
+  --p-indigo: #4e5bd6;
+
   width: 1050px;
   height: 742px;
   background: #ffffff;
@@ -712,6 +723,7 @@
   border: 1px solid #e0d9cd;
   border-radius: 7px;
   padding: 5px 6px;
+  background: var(--care-tint, transparent);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -720,12 +732,13 @@
 }
 
 .fridge-cell[data-outside='true'] {
-  background: #faf8f4;
+  background: var(--care-tint, #faf8f4);
   border-color: #efe9de;
 }
 
 .fridge-cell[data-outside='true'] .fridge-cell__num,
-.fridge-cell[data-outside='true'] .fridge-item {
+.fridge-cell[data-outside='true'] .fridge-item,
+.fridge-cell[data-outside='true'] .fridge-cell__carelabel {
   opacity: 0.38;
 }
 
@@ -918,25 +931,32 @@
   position: relative;
 }
 
-/* care on the printed sheet */
-.fridge-cell__care {
+/* Care on the printed sheet: the shade carries the day, and the household is
+   named where a stretch begins so the sheet still works in black and white. */
+.fridge-cell__carelabel {
   display: flex;
-  gap: 3px;
+  flex-direction: column;
+  gap: 1px;
   margin-bottom: 3px;
-  flex-wrap: wrap;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #4b453b;
+  letter-spacing: 0.01em;
 }
 
-.fridge-care {
-  display: inline-grid;
-  place-items: center;
-  min-width: 14px;
+.fridge-cell__carelabel span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fridge-sheet__swatch {
+  width: 13px;
   height: 13px;
-  padding: 0 3px;
   border-radius: 3px;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1;
+  border: 1px solid;
+  flex: none;
 }
 
 .carewho__swap--alt {

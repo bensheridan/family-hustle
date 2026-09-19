@@ -214,7 +214,7 @@ export function HandoverRows({ handovers }: { handovers: Handover[] }) {
 }
 
 /** 'Otis', 'Otis and Juno', 'Otis, Juno and Wren' */
-function joinNames(names: string[]): string {
+export function joinNames(names: string[]): string {
   if (names.length === 1) return names[0];
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }

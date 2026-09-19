@@ -136,6 +136,11 @@ schedule to adjust.
   siblings are in different places; week day-headers carry a quiet "Otis at
   Theo's" line. Only actual handovers get a row, because a handover is a real
   thing someone has to drive to.
+- **on paper** — the fridge sheet shades days the same way, but two tints of
+  equal lightness are the same grey once photocopied, so the household is also
+  named wherever a stretch begins and at the start of every week. The sheet
+  pins its own light colours, so a PNG exported from the app in dark mode
+  still prints the colours the key describes.
 - **handovers** — derived from the schedule and shown as calendar rows, with
   children moving the same way on the same day grouped into one row.
 - **household visibility** — entries default to both households. Anything

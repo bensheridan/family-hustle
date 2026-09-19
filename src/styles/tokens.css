@@ -1,0 +1,139 @@
+/* Family hustle — design tokens.
+   Direction: clean, modern, warm, practical, slightly cheeky.
+   Not corporate. Not pastel. Not a preschool rainbow. */
+
+:root {
+  /* surfaces — warm paper, never clinical white */
+  --paper: #fbf9f6;
+  --surface: #ffffff;
+  --surface-2: #f4f1ec;
+  --surface-sunk: #efebe4;
+
+  /* ink */
+  --ink: #16140f;
+  --ink-2: #57524a;
+  --ink-3: #8c857a;
+  --ink-inv: #fdfcfa;
+
+  /* structure */
+  --line: #e7e1d8;
+  --line-strong: #d6cec1;
+
+  /* accent — burnt orange, the cheeky bit */
+  --accent: #d9502a;
+  --accent-ink: #ffffff;
+  --accent-soft: #fbeae3;
+  --accent-line: #f2c9b8;
+
+  /* states */
+  --good: #2f8f5b;
+  --good-soft: #e4f2ea;
+  --warn: #c98a12;
+  --warn-soft: #f9efd8;
+  --alert: #c0392b;
+  --alert-soft: #f9e4e1;
+
+  /* people — saturated and grown up, never candy */
+  --p-purple: #7c5cd6;
+  --p-blue: #2f7fe0;
+  --p-orange: #e07b2f;
+  --p-green: #2fa26b;
+  --p-pink: #d6457e;
+  --p-teal: #1f9b9b;
+  --p-amber: #c08a10;
+  --p-indigo: #4e5bd6;
+
+  /* shape */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+
+  /* depth — barely there */
+  --shadow-1: 0 1px 2px rgba(22, 20, 15, 0.05);
+  --shadow-2: 0 2px 10px rgba(22, 20, 15, 0.07);
+  --shadow-3: 0 12px 34px rgba(22, 20, 15, 0.14);
+
+  /* rhythm */
+  --gap: 14px;
+  --pad: 18px;
+  --tab-h: 62px;
+
+  --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-num: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #14130f;
+    --surface: #1d1b16;
+    --surface-2: #26231d;
+    --surface-sunk: #100f0c;
+
+    --ink: #f3efe8;
+    --ink-2: #b5aea2;
+    --ink-3: #857e73;
+    --ink-inv: #14130f;
+
+    --line: #302c25;
+    --line-strong: #433d33;
+
+    --accent: #f26a41;
+    --accent-ink: #1a0f0a;
+    --accent-soft: #33201a;
+    --accent-line: #5a3325;
+
+    --good: #4fb87c;
+    --good-soft: #17281e;
+    --warn: #dfa93a;
+    --warn-soft: #2b2314;
+    --alert: #e46a5c;
+    --alert-soft: #2c1a18;
+
+    --p-purple: #9a7ded;
+    --p-blue: #5b9df0;
+    --p-orange: #ef9a51;
+    --p-green: #4fbd86;
+    --p-pink: #e86a9c;
+    --p-teal: #3bbaba;
+    --p-amber: #d9a52c;
+    --p-indigo: #7683ec;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 2px 10px rgba(0, 0, 0, 0.45);
+    --shadow-3: 0 12px 34px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #14130f;
+  --surface: #1d1b16;
+  --surface-2: #26231d;
+  --surface-sunk: #100f0c;
+  --ink: #f3efe8;
+  --ink-2: #b5aea2;
+  --ink-3: #857e73;
+  --ink-inv: #14130f;
+  --line: #302c25;
+  --line-strong: #433d33;
+  --accent: #f26a41;
+  --accent-ink: #1a0f0a;
+  --accent-soft: #33201a;
+  --accent-line: #5a3325;
+  --good: #4fb87c;
+  --good-soft: #17281e;
+  --warn: #dfa93a;
+  --warn-soft: #2b2314;
+  --alert: #e46a5c;
+  --alert-soft: #2c1a18;
+  --p-purple: #9a7ded;
+  --p-blue: #5b9df0;
+  --p-orange: #ef9a51;
+  --p-green: #4fbd86;
+  --p-pink: #e86a9c;
+  --p-teal: #3bbaba;
+  --p-amber: #d9a52c;
+  --p-indigo: #7683ec;
+}

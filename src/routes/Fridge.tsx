@@ -1,0 +1,280 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { toPng } from 'html-to-image';
+import { useStore } from '../state/store';
+import {
+  addMonths,
+  isSameMonth,
+  monthGrid,
+  monthName,
+  monthYear,
+  startOfMonth,
+  today,
+} from '../lib/date';
+import { expand, groupByDate, timeLabel } from '../domain/occurrences';
+import { colourVar } from '../domain/categories';
+import { Toggle } from '../components/ui';
+import type { Category, ISODate, Occurrence } from '../types';
+
+/** The fridge calendar.
+ *
+ * This is designed for paper, not as a screenshot of the app: a full
+ * Monday–Sunday grid, real dates, room to read it from across the kitchen.
+ */
+export function Fridge() {
+  const { state, personById } = useStore();
+  const [params] = useSearchParams();
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState(false);
+  const { scrollerRef, scale } = useFitToWidth(SHEET_W);
+
+  const [month, setMonth] = useState<ISODate>(
+    startOfMonth(params.get('month') ?? today()),
+  );
+
+  const [show, setShow] = useState<Record<Category, boolean>>({
+    school: true,
+    activity: true,
+    appointment: false,
+    family: true,
+    work: true,
+    task: false,
+    sharedCare: state.settings.sharedCareEnabled,
+  });
+  const [showTimes, setShowTimes] = useState(true);
+  const [showNames, setShowNames] = useState(true);
+
+  const grid = useMemo(
+    () => monthGrid(month, state.settings.weekStartsMonday),
+    [month, state.settings.weekStartsMonday],
+  );
+
+  const byDate = useMemo(() => {
+    const entries = state.entries.filter((e) => show[e.category]);
+    return groupByDate(expand(entries, grid[0], grid[41], { includeTails: false }));
+  }, [state.entries, show, grid]);
+
+  const heads = state.settings.weekStartsMonday
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const saveImage = async () => {
+    if (!sheetRef.current) return;
+    setBusy(true);
+    try {
+      const url = await toPng(sheetRef.current, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        // the sheet is styled for paper — capture it that way regardless of theme
+        style: { colorScheme: 'light' },
+      });
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `family-hustle-${monthName(month).toLowerCase()}.png`;
+      a.click();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fridge">
+      <header className="fridge__bar">
+        <Link className="btn btn--sm btn--quiet" to="/calendar">
+          back
+        </Link>
+        <div className="fridge__title">your fridge calendar</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            type="button"
+            className="stepper"
+            onClick={() => setMonth(addMonths(month, -1))}
+            aria-label="previous month"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="stepper"
+            onClick={() => setMonth(addMonths(month, 1))}
+            aria-label="next month"
+          >
+            ›
+          </button>
+        </div>
+      </header>
+
+      <div className="fridge__scroller" ref={scrollerRef}>
+        <div
+          className="fridge__page"
+          style={{
+            transform: `scale(${scale})`,
+            height: SHEET_H * scale,
+            width: SHEET_W,
+          }}
+        >
+          {/* Everything inside this node is what gets printed and exported. */}
+          <div className="fridge-sheet" ref={sheetRef}>
+            <div className="fridge-sheet__head">
+              <div>
+                <div className="fridge-sheet__month">{monthYear(month)}</div>
+                <div className="fridge-sheet__brand">Family hustle</div>
+              </div>
+              <div className="fridge-sheet__key">
+                {state.people
+                  .filter((p) => p.role !== 'pet')
+                  .map((p) => (
+                    <span key={p.id} className="fridge-sheet__keyitem">
+                      <span className="dot" style={{ background: colourVar(p.colour) }} />
+                      {p.name}
+                    </span>
+                  ))}
+              </div>
+            </div>
+
+            <div className="fridge-sheet__heads">
+              {heads.map((h) => (
+                <span key={h}>{h}</span>
+              ))}
+            </div>
+
+            <div className="fridge-sheet__grid">
+              {grid.map((d) => {
+                const occs = byDate.get(d) ?? [];
+                const outside = !isSameMonth(d, month);
+                return (
+                  <div key={d} className="fridge-cell" data-outside={outside}>
+                    <div className="fridge-cell__num">{Number(d.slice(8, 10))}</div>
+                    <div className="fridge-cell__items">
+                      {occs.slice(0, 5).map((o) => (
+                        <FridgeItem
+                          key={o.key}
+                          occ={o}
+                          showTime={showTimes}
+                          showName={showNames}
+                          colour={
+                            o.entry.personIds[0]
+                              ? colourVar(personById(o.entry.personIds[0])?.colour ?? 'purple')
+                              : 'var(--ink-3)'
+                          }
+                          name={
+                            o.entry.personIds.length === 1
+                              ? personById(o.entry.personIds[0])?.name
+                              : undefined
+                          }
+                        />
+                      ))}
+                      {occs.length > 5 && (
+                        <div className="fridge-item fridge-item--more">
+                          +{occs.length - 5} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="fridge-sheet__foot">
+              stuck on the fridge by Family hustle · {monthYear(month)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="fridge__controls">
+        <div className="fridge__controlhead">show</div>
+        <div className="card">
+          <Toggle label="school/daycare" on={show.school} onChange={(v) => setShow({ ...show, school: v })} />
+          <Toggle label="activities" on={show.activity} onChange={(v) => setShow({ ...show, activity: v })} />
+          <Toggle label="family" on={show.family} onChange={(v) => setShow({ ...show, family: v })} />
+          <Toggle label="work & shifts" on={show.work} onChange={(v) => setShow({ ...show, work: v })} />
+          <Toggle
+            label="appointments"
+            on={show.appointment}
+            onChange={(v) => setShow({ ...show, appointment: v })}
+          />
+          <Toggle label="tasks" on={show.task} onChange={(v) => setShow({ ...show, task: v })} />
+          {state.settings.sharedCareEnabled && (
+            <Toggle
+              label="shared care"
+              on={show.sharedCare}
+              onChange={(v) => setShow({ ...show, sharedCare: v })}
+            />
+          )}
+          <Toggle label="times" on={showTimes} onChange={setShowTimes} />
+          <Toggle label="names" on={showNames} onChange={setShowNames} />
+        </div>
+
+        <div className="fridge__buttons">
+          <button type="button" className="btn btn--accent" onClick={saveImage} disabled={busy}>
+            {busy ? 'saving…' : 'save as image'}
+          </button>
+          <button type="button" className="btn btn--ghost" onClick={() => window.print()}>
+            save as PDF
+          </button>
+          <button type="button" className="btn btn--ghost" onClick={() => window.print()}>
+            print
+          </button>
+        </div>
+        <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+          for PDF, choose “save as PDF” as the destination in the print dialog. the sheet is laid
+          out for A4 landscape.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** The sheet is a fixed A4-landscape canvas; the preview just scales it down
+ *  to whatever width the screen has. */
+const SHEET_W = 1050;
+const SHEET_H = 742;
+
+function useFitToWidth(width: number) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.4);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const styles = getComputedStyle(el);
+      const pad = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+      const available = el.clientWidth - pad;
+      if (available > 0) setScale(Math.min(1, available / width));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [width]);
+
+  return { scrollerRef, scale };
+}
+
+function FridgeItem({
+  occ,
+  showTime,
+  showName,
+  colour,
+  name,
+}: {
+  occ: Occurrence;
+  showTime: boolean;
+  showName: boolean;
+  colour: string;
+  name?: string;
+}) {
+  const time = occ.allDay ? '' : timeLabel(occ).split('–')[0].split('→')[0].trim();
+  return (
+    <div className="fridge-item">
+      <span className="fridge-item__dot" style={{ background: colour }} />
+      <span className="fridge-item__text">
+        {showTime && time && <span className="fridge-item__time">{time}</span>}
+        <span className="fridge-item__title">{occ.entry.title}</span>
+        {showName && name && <span className="fridge-item__who">{name}</span>}
+      </span>
+    </div>
+  );
+}

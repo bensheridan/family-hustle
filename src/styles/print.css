@@ -1,0 +1,94 @@
+/* The fridge calendar on paper.
+ *
+ * Printing is a first-class output, not a screenshot of the app: everything
+ * except the sheet is hidden, and the sheet is laid out for A4 landscape. */
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    height: auto;
+  }
+
+  /* hide the app around the sheet without unmounting it */
+  body * {
+    visibility: hidden;
+  }
+
+  .fridge-sheet,
+  .fridge-sheet * {
+    visibility: visible;
+  }
+
+  .app {
+    max-width: none !important;
+    box-shadow: none !important;
+    display: block !important;
+  }
+
+  .app__main {
+    padding: 0 !important;
+  }
+
+  .tabbar,
+  .fridge__bar,
+  .fridge__controls,
+  .topbar {
+    display: none !important;
+  }
+
+  .fridge {
+    background: #ffffff !important;
+    min-height: 0;
+  }
+
+  .fridge__scroller {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  /* the preview shrinks the sheet to fit a phone — undo that for paper */
+  .fridge__page {
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .fridge-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 277mm;
+    height: 188mm;
+    padding: 0;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .fridge-cell,
+  .fridge-item__dot,
+  .fridge-sheet__keyitem .dot {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .fridge-sheet__month {
+    font-size: 34px;
+  }
+
+  .fridge-cell__num {
+    font-size: 13px;
+  }
+
+  .fridge-item {
+    font-size: 10.5px;
+  }
+}

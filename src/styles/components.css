@@ -1,0 +1,790 @@
+/* Family hustle — screen styles for the pieces that aren't generic UI. */
+
+/* ---------- tasks ---------- */
+
+.task-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  flex: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.task-check[data-done='true'] {
+  background: var(--good);
+  border-color: var(--good);
+}
+
+.task-check[data-done='true']::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* ---------- day groups ---------- */
+
+.daygroup + .daygroup {
+  border-top: 1px solid var(--line);
+}
+
+.daygroup__head {
+  padding: 11px 14px 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: var(--accent);
+}
+
+.weekday + .weekday {
+  margin-top: 14px;
+}
+
+.weekday__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  font-size: 14px;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+
+.weekday__today {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+}
+
+/* ---------- heads up ---------- */
+
+.headsup__line {
+  font-size: 14.5px;
+  line-height: 1.4;
+  padding-left: 16px;
+  position: relative;
+}
+
+.headsup__line + .headsup__line {
+  margin-top: 9px;
+}
+
+.headsup__line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+}
+
+.headsup__line[data-tone='warn']::before {
+  background: var(--warn);
+}
+
+/* ---------- availability ---------- */
+
+.availability {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.availability__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.availability__name {
+  font-size: 13.5px;
+  font-weight: 640;
+  line-height: 1.2;
+}
+
+.availability__state {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---------- tiles ---------- */
+
+.tilegrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.1s ease;
+}
+
+.tile:active {
+  transform: scale(0.985);
+}
+
+.tile__label {
+  font-weight: 680;
+  font-size: 15.5px;
+  letter-spacing: -0.01em;
+}
+
+.tile__sub {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- steppers ---------- */
+
+.stepper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 19px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  transition: background 0.14s ease;
+}
+
+.stepper:active {
+  background: var(--line);
+}
+
+/* ---------- month grid ---------- */
+
+.month__heads {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.month__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.month__cell {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 6px;
+  gap: 4px;
+  background: transparent;
+  transition: background 0.14s ease;
+}
+
+.month__cell[data-outside='true'] {
+  opacity: 0.32;
+}
+
+.month__cell[data-today='true'] .month__num {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.month__cell[data-selected='true'] {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.month__num {
+  font-size: 13.5px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.month__dots {
+  display: flex;
+  gap: 2.5px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 34px;
+}
+
+.month__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+/* ---------- onboarding ---------- */
+
+.onb {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--pad);
+}
+
+.onb__pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 0 34px;
+}
+
+.onb__pane--hero {
+  justify-content: center;
+  text-align: left;
+  gap: 14px;
+}
+
+.onb__brandmark {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+
+.onb__headline {
+  font-size: 36px;
+  font-weight: 780;
+  letter-spacing: -0.038em;
+  line-height: 1.06;
+}
+
+.onb__lede {
+  font-size: 16px;
+  color: var(--ink-2);
+  line-height: 1.45;
+  max-width: 34ch;
+}
+
+.onb__actions {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.onb__avatars {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.onb__head {
+  margin-bottom: 18px;
+}
+
+.onb__step {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.onb__title {
+  font-size: 28px;
+  font-weight: 760;
+  letter-spacing: -0.032em;
+  line-height: 1.12;
+  margin-top: 6px;
+}
+
+.onb__sub {
+  color: var(--ink-3);
+  font-size: 14.5px;
+  margin-top: 6px;
+}
+
+.onb__list {
+  margin-bottom: 14px;
+}
+
+.onb__add {
+  background: var(--surface-2);
+  border-radius: var(--r-lg);
+  padding: 12px;
+}
+
+.onb__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.onb__foot {
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.pickcard {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 15px 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pickcard[data-on='true'] {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+.pickcard__label {
+  font-weight: 680;
+  font-size: 16px;
+  letter-spacing: -0.012em;
+}
+
+.pickcard__sub {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+/* ---------- add ---------- */
+
+.repeatlast {
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px 16px;
+  border-radius: var(--r-lg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  text-align: left;
+}
+
+.repeatlast__label {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.repeatlast__value {
+  font-size: 14px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shiftpreview {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14.5px;
+}
+
+.shiftpreview[data-overnight='true'] {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+}
+
+.shiftpreview span {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ---------- detail sheet ---------- */
+
+.detail__when {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.detail__row {
+  color: var(--ink-2);
+  font-size: 14.5px;
+}
+
+.detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 14px 0;
+}
+
+.detail__block {
+  margin-top: 16px;
+}
+
+.detail__label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 7px;
+}
+
+.detail__people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.detail__person {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14.5px;
+}
+
+.detail__note {
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-radius: var(--r-md);
+  background: var(--warn-soft);
+  font-size: 14.5px;
+}
+
+.detail__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.detail__actions .btn {
+  flex: 1;
+}
+
+/* ---------- kids ---------- */
+
+.kidcard {
+  display: block;
+  padding: 14px;
+}
+
+.kidcard + .kidcard {
+  margin-top: var(--gap);
+}
+
+.kidcard__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kidcard__name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+}
+
+.kidcard__count {
+  font-size: 13px;
+}
+
+.kidcard__chev {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.kidcard__line {
+  display: grid;
+  grid-template-columns: 82px 1fr auto;
+  gap: 8px;
+  font-size: 13.5px;
+  padding: 7px 0 0;
+  align-items: baseline;
+}
+
+.kidcard__line span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kidhero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.kidhero__next {
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+
+/* ---------- work ---------- */
+
+.worksummary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.worksummary__hours {
+  font-size: 19px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+
+.fridgecta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ---------- fridge export (screen) ---------- */
+
+.fridge {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-sunk);
+}
+
+.fridge__bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px var(--pad);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.fridge__title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+}
+
+.fridge__scroller {
+  padding: 16px var(--pad);
+}
+
+.fridge__page {
+  /* A4 landscape, scaled by JS to whatever width the screen has. */
+  transform-origin: top left;
+}
+
+.fridge__controls {
+  padding: 0 var(--pad) 40px;
+}
+
+.fridge__controlhead {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+}
+
+.fridge__buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.fridge__buttons .btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* ---------- the printable sheet itself ----------
+   Deliberately its own visual language: black on white, generous, and
+   readable from the other side of the kitchen. It ignores dark mode. */
+
+.fridge-sheet {
+  width: 1050px;
+  height: 742px;
+  background: #ffffff;
+  color: #17150f;
+  padding: 30px 34px 22px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
+}
+
+.fridge-sheet__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #17150f;
+}
+
+.fridge-sheet__month {
+  font-size: 40px;
+  font-weight: 780;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.fridge-sheet__brand {
+  font-size: 13px;
+  font-weight: 640;
+  color: #857e73;
+  letter-spacing: 0.01em;
+  margin-top: 5px;
+}
+
+.fridge-sheet__key {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.fridge-sheet__keyitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fridge-sheet__heads {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  padding: 10px 0 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6f685d;
+}
+
+.fridge-sheet__grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 5px;
+}
+
+.fridge-cell {
+  border: 1px solid #e0d9cd;
+  border-radius: 7px;
+  padding: 5px 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+
+.fridge-cell[data-outside='true'] {
+  background: #faf8f4;
+  border-color: #efe9de;
+}
+
+.fridge-cell[data-outside='true'] .fridge-cell__num,
+.fridge-cell[data-outside='true'] .fridge-item {
+  opacity: 0.38;
+}
+
+.fridge-cell__num {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.fridge-cell__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fridge-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.fridge-item__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 4px;
+}
+
+.fridge-item__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fridge-item__time {
+  font-weight: 700;
+  margin-right: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fridge-item__title {
+  font-weight: 560;
+}
+
+.fridge-item__who {
+  color: #6f685d;
+  margin-left: 4px;
+}
+
+.fridge-item--more {
+  font-size: 10px;
+  color: #857e73;
+  padding-left: 9px;
+}

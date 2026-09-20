@@ -15,6 +15,9 @@ import { EntrySheet } from '../components/EntrySheet';
 import { WhosGotTheKids, moversHeading } from '../components/CareBits';
 import { filterForHousehold } from '../domain/care';
 import { nextSchoolChange, schoolChangeLine } from '../domain/school';
+import { clockChangeLine, nextClockChange } from '../domain/clocks';
+import { nextHoliday } from '../domain/holidays';
+import { diffDays, relativeDay as relDay } from '../lib/date';
 import type { Occurrence } from '../types';
 
 /** The family command centre: what is happening today, what is coming up. */
@@ -54,12 +57,54 @@ export function Home() {
       ...(() => {
         const change = nextSchoolChange(state.schoolTerms, day, 21);
         return change
-          ? [{ id: `school:${change.date}`, text: schoolChangeLine(change), tone: 'info' as const }]
+          ? [
+              {
+                id: `school:${change.date}`,
+                text: schoolChangeLine(change),
+                tone: 'info' as const,
+                days: change.days,
+              },
+            ]
+          : [];
+      })(),
+      // the clocks changing costs or gives an hour, which matters most to
+      // whoever is on nights that weekend
+      ...(() => {
+        const clocks = nextClockChange(day, 10);
+        return clocks
+          ? [
+              {
+                id: `clocks:${clocks.date}`,
+                text: clockChangeLine(clocks, day),
+                tone: 'info' as const,
+                days: diffDays(clocks.date, day),
+              },
+            ]
+          : [];
+      })(),
+      ...(() => {
+        const holiday = nextHoliday(state.publicHolidays, day, 10);
+        return holiday
+          ? [
+              {
+                id: `holiday:${holiday.id}`,
+                text: `${holiday.name} is ${relDay(holiday.date, day)}.`,
+                tone: 'info' as const,
+                days: diffDays(holiday.date, day),
+              },
+            ]
           : [];
       })(),
     ],
-    [entries, state.people, state.schoolTerms, day],
+    [entries, state.people, state.schoolTerms, state.publicHolidays, day],
   );
+
+  /* Sorted by how soon, so the card shows what matters next rather than
+   * whatever was generated first — and says how many it is holding back
+   * instead of quietly losing them. */
+  const sortedHeadsUp = [...headsUp].sort((a, b) => (a.days ?? 0) - (b.days ?? 0));
+  const shownHeadsUp = sortedHeadsUp.slice(0, 5);
+  const hiddenHeadsUp = sortedHeadsUp.length - shownHeadsUp.length;
 
   const byDay = groupByDate(upcoming);
 
@@ -136,11 +181,14 @@ export function Home() {
         <section className="section">
           <SectionHead title="heads up" />
           <div className="card card--pad headsup">
-            {headsUp.slice(0, 5).map((h) => (
+            {shownHeadsUp.map((h) => (
               <p key={h.id} className="headsup__line" data-tone={h.tone}>
                 {h.text}
               </p>
             ))}
+            {hiddenHeadsUp > 0 && (
+              <p className="headsup__more">and {hiddenHeadsUp} more this fortnight</p>
+            )}
           </div>
         </section>
       )}

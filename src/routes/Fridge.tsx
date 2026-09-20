@@ -45,6 +45,7 @@ export function Fridge() {
     // not on the wall by default — the mortgage is nobody else's business
     moneyIn: false,
     moneyOut: false,
+    holiday: true,
   });
   const [showTimes, setShowTimes] = useState(true);
   const [showNames, setShowNames] = useState(true);

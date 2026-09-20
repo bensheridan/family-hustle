@@ -9,6 +9,7 @@ interface CategoryMeta {
 }
 
 export const CATEGORIES: Record<Category, CategoryMeta> = {
+  holiday: { label: 'public holidays', colour: 'var(--p-indigo)' },
   moneyIn: { label: 'money in', colour: 'var(--money-in)' },
   moneyOut: { label: 'money out', colour: 'var(--money-out)' },
   school: { label: 'school/daycare', colour: 'var(--p-blue)' },
@@ -22,6 +23,7 @@ export const CATEGORIES: Record<Category, CategoryMeta> = {
 
 /** Singular labels for the add flow. */
 export const CATEGORY_SINGULAR: Record<Category, string> = {
+  holiday: 'public holiday',
   moneyIn: 'money in',
   moneyOut: 'money out',
   school: 'school/daycare',

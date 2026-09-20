@@ -89,6 +89,9 @@ export interface HeadsUp {
   id: string;
   text: string;
   tone: 'info' | 'warn';
+  /** how many days away, so the most imminent can be shown first rather
+   *  than whichever happened to be generated first */
+  days?: number;
 }
 
 export function headsUpFor(
@@ -186,6 +189,7 @@ export function upcomingReminders(
           id: `${occ.key}:birthday`,
           text: birthdayLine(person, occ.date, from),
           tone: days <= 1 ? 'warn' : 'info',
+          days,
         });
         continue;
       }
@@ -201,6 +205,7 @@ export function upcomingReminders(
         ? `${occ.title} ${whenPhrase(days)} — ${years} years.`
         : `${occ.title} ${whenPhrase(days)}.`,
       tone: days <= 2 ? 'warn' : 'info',
+      days,
     });
   }
   return out;

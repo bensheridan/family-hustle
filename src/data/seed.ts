@@ -313,6 +313,7 @@ export function seedState(): State {
     entries,
     careSchedules: [],
     schoolTerms: [],
+    publicHolidays: [],
   };
 }
 
@@ -330,5 +331,6 @@ export function blankState(): State {
     entries: [],
     careSchedules: [],
     schoolTerms: [],
+    publicHolidays: [],
   };
 }

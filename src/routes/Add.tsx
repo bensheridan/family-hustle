@@ -1053,6 +1053,7 @@ function HouseholdField({
 }
 
 const CATEGORY_LABEL: Record<Category, string> = {
+  holiday: 'public holiday',
   moneyIn: 'money in',
   moneyOut: 'money out',
   activity: 'activity',

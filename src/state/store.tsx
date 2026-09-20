@@ -8,6 +8,7 @@ import {
 } from 'react';
 import type {
   CareSchedule,
+  PublicHoliday,
   SchoolTerm,
   Entry,
   Household,
@@ -21,6 +22,7 @@ import type {
 import { seedState } from '../data/seed';
 import { viewingHousehold } from '../domain/care';
 import { birthdayEntries } from '../domain/birthdays';
+import { holidayEntries } from '../domain/holidays';
 
 const KEY = 'family-hustle:v1';
 
@@ -34,6 +36,8 @@ type Action =
   | { type: 'terms/set'; terms: SchoolTerm[] }
   | { type: 'terms/update'; id: Id; patch: Partial<SchoolTerm> }
   | { type: 'terms/clear' }
+  | { type: 'holidays/set'; holidays: PublicHoliday[] }
+  | { type: 'holidays/clear' }
   | { type: 'care/override'; personId: Id; date: ISODate; householdId: Id }
   | { type: 'care/clearOverride'; personId: Id; date: ISODate }
   | { type: 'care/cycleDay'; personId: Id; index: number; householdId: Id }
@@ -97,6 +101,12 @@ function reducer(state: State, action: Action): State {
 
     case 'terms/clear':
       return { ...state, schoolTerms: [] };
+
+    case 'holidays/set':
+      return { ...state, publicHolidays: action.holidays };
+
+    case 'holidays/clear':
+      return { ...state, publicHolidays: [] };
 
     case 'care/remove':
       return {
@@ -218,6 +228,7 @@ function migrate(state: State): State {
   return {
     ...state,
     schoolTerms: state.schoolTerms ?? [],
+    publicHolidays: state.publicHolidays ?? [],
     // schedules saved before this applied to children only
     careSchedules: (state.careSchedules ?? []).map((c) => ({
       ...c,
@@ -283,7 +294,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return {
       state,
       dispatch,
-      entries: [...state.entries, ...birthdayEntries(people)],
+      entries: [
+        ...state.entries,
+        ...birthdayEntries(people),
+        ...holidayEntries(state.publicHolidays),
+      ],
       personById: (id) => people.find((p) => p.id === id),
       adults: people.filter((p) => p.role === 'adult'),
       children: people.filter((p) => p.role === 'child'),

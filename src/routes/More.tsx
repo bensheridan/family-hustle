@@ -121,14 +121,19 @@ export function More() {
       </section>
 
       <section className="section">
-        <SectionHead title="school" />
-        <Link className="card card--pad fridgecta" to="/school-terms">
+        <SectionHead title="the year" />
+        <Link className="card card--pad fridgecta" to="/year">
           <div>
-            <div className="row__title">term dates</div>
+            <div className="row__title">terms, holidays and the clocks</div>
             <div className="row__meta">
-              {state.schoolTerms.length === 0
-                ? 'not set · the holidays will arrive unannounced'
-                : `${state.schoolTerms.length} terms saved`}
+              {[
+                state.schoolTerms.length > 0 ? `${state.schoolTerms.length} terms` : null,
+                state.publicHolidays.length > 0
+                  ? `${state.publicHolidays.length} public holidays`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || 'not set yet'}
             </div>
           </div>
           <span className="kidcard__chev">›</span>

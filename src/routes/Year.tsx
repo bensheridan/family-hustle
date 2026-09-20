@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { newId, useStore } from '../state/store';
 import { NZ_TERMS, availablePresetYears, holidayAround, nextSchoolChange, schoolChangeLine } from '../domain/school';
+import { NZ_HOLIDAYS, availableHolidayYears } from '../domain/holidays';
+import { clockChangeLine, nextClockChange } from '../domain/clocks';
 import { fullDate, shortDate, today } from '../lib/date';
 import { SectionHead, Empty } from '../components/ui';
 import type { SchoolTerm } from '../types';
@@ -11,7 +13,7 @@ import type { SchoolTerm } from '../types';
  * Six weeks over summer and a fortnight in April are the bits somebody has to
  * cover, so once the dates are in, the app can see them coming.
  */
-export function SchoolTerms() {
+export function Year() {
   const { state, dispatch, children } = useStore();
   const year = Number(today().slice(0, 4));
   const terms = [...state.schoolTerms].sort((a, b) => a.start.localeCompare(b.start));
@@ -44,8 +46,8 @@ export function SchoolTerms() {
     <>
       <header className="topbar">
         <div>
-          <div className="topbar__title">school terms</div>
-          <div className="topbar__sub">so the holidays don’t arrive unannounced</div>
+          <div className="topbar__title">the year</div>
+          <div className="topbar__sub">terms, public holidays, and the clocks</div>
         </div>
         <Link className="btn btn--sm btn--quiet" to="/more">
           back
@@ -61,11 +63,9 @@ export function SchoolTerms() {
       {terms.length > 0 && (change || holiday) && (
         <div className="card card--pad" style={{ marginTop: 14 }}>
           {holiday ? (
-            <div className="row__title">
-              school holidays, back {shortDate(holiday.to)}
-            </div>
+            <div className="yearnote">school holidays, back {shortDate(holiday.to)}</div>
           ) : change ? (
-            <div className="row__title">{schoolChangeLine(change)}</div>
+            <div className="yearnote">{schoolChangeLine(change)}</div>
           ) : null}
           <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
             {holiday
@@ -77,9 +77,22 @@ export function SchoolTerms() {
         </div>
       )}
 
+      {(() => {
+        const clocks = nextClockChange(day, 200);
+        return clocks ? (
+          <div className="card card--pad" style={{ marginTop: 14 }}>
+            <div className="yearnote">{clockChangeLine(clocks, day)}</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+              {fullDate(clocks.date)} · worked out from this device’s timezone, so it is right
+              wherever you are
+            </div>
+          </div>
+        ) : null;
+      })()}
+
       <section className="section">
         <SectionHead
-          title="terms"
+          title="school terms"
           action={
             <button type="button" className="section__link" onClick={addTerm}>
               + add a term
@@ -113,6 +126,69 @@ export function SchoolTerms() {
           <p className="field__hint">
             only years the ministry has published are offered. a year that isn’t listed hasn’t been
             confirmed, and wrong dates in a calendar are worse than none.
+          </p>
+        </div>
+      </section>
+
+      <section className="section">
+        <SectionHead title="public holidays" />
+        <div className="card">
+          {state.publicHolidays.length === 0 ? (
+            <Empty icon="🇳🇿">none saved yet.</Empty>
+          ) : (
+            [...state.publicHolidays]
+              .sort((a, b) => a.date.localeCompare(b.date))
+              .map((h) => (
+                <div key={h.id} className="row">
+                  <span className="row__main">
+                    <span className="row__title">{h.name}</span>
+                    <span className="row__meta">
+                      {fullDate(h.date)}
+                      {h.actualDate ? ` · moved from ${shortDate(h.actualDate)}` : ''}
+                    </span>
+                  </span>
+                </div>
+              ))
+          )}
+        </div>
+        <div className="card card--pad" style={{ marginTop: 10 }}>
+          <div className="choices">
+            {availableHolidayYears().map((y) => (
+              <button
+                key={y}
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() =>
+                  dispatch({
+                    type: 'holidays/set',
+                    holidays: [
+                      ...state.publicHolidays.filter((h) => h.year !== y),
+                      ...NZ_HOLIDAYS[y].map((h) => ({ ...h, id: newId() })),
+                    ],
+                  })
+                }
+              >
+                New Zealand {y}
+              </button>
+            ))}
+            {state.publicHolidays.length > 0 && (
+              <button
+                type="button"
+                className="btn btn--quiet btn--sm"
+                onClick={() => dispatch({ type: 'holidays/clear' })}
+              >
+                clear
+              </button>
+            )}
+          </div>
+          <p className="field__hint" style={{ marginTop: 10 }}>
+            the date kept is the day off. where a holiday falls at a weekend the day off moves to
+            the Monday, and the original is noted — Anzac Day services are on the 25th whichever
+            day that lands on.
+          </p>
+          <p className="field__hint">
+            regional anniversary days are not included: they vary by region and your council is the
+            one that knows. add yours as a yearly event.
           </p>
         </div>
       </section>

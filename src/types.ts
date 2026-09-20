@@ -53,6 +53,17 @@ export interface Person {
   jobTitle?: string;
 }
 
+/** A day off that the whole country takes. */
+export interface PublicHoliday {
+  id: Id;
+  name: string;
+  /** the day people actually get off, after any shift to a Monday */
+  date: ISODate;
+  /** the real date, where the day off was moved from it */
+  actualDate?: ISODate;
+  year: number;
+}
+
 /** One school term. Terms bracket the year for a family with children: the
  *  holidays between them are the bit that needs planning. */
 export interface SchoolTerm {
@@ -111,6 +122,7 @@ export interface CareSchedule {
 }
 
 export type Category =
+  | 'holiday'
   | 'moneyIn'
   | 'moneyOut'
   | 'school'
@@ -167,7 +179,7 @@ interface EntryBase {
   /** Generated from somewhere else — a person's birthday, say — rather than
    *  created by hand. Derived entries cannot be edited or deleted on the
    *  calendar, because the thing that produced them is the real record. */
-  derived?: 'birthday';
+  derived?: 'birthday' | 'holiday';
   recurrence: Recurrence;
   /** Last day the recurrence runs, inclusive. */
   until?: ISODate;
@@ -263,6 +275,7 @@ export interface State {
   careSchedules: CareSchedule[];
   /** Term dates, once a family has entered or imported them. */
   schoolTerms: SchoolTerm[];
+  publicHolidays: PublicHoliday[];
   /** Powers "repeat last" — the fastest way to add the thing you always add. */
   lastTemplate?: Template;
 }

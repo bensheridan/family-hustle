@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { expand } from '../domain/occurrences';
-import { addDays, relativeDay, today } from '../lib/date';
+import { addDays, diffDays, relativeDay, shortDate, today } from '../lib/date';
 import { Avatar, Empty } from '../components/ui';
 import { timeLabel } from '../domain/occurrences';
 
@@ -43,27 +43,43 @@ export function Kids() {
             });
 
             return (
-              <Link key={child.id} to={`/kids/${child.id}`} className="card kidcard">
+              /* Two sibling links rather than a button inside a link: open
+                 the child, or add something for them without opening them. */
+              <div key={child.id} className="card kidcard">
                 <div className="kidcard__head">
-                  <Avatar person={child} size="lg" />
-                  <div>
-                    <div className="kidcard__name">{child.name}</div>
-                    <div className="kidcard__count muted">
-                      {next.length === 0
-                        ? 'nothing coming up'
-                        : `${next.length} things in the next 2 weeks`}
+                  <Link to={`/kids/${child.id}`} className="kidcard__headmain">
+                    <Avatar person={child} size="lg" />
+                    <div>
+                      <div className="kidcard__name">{child.name}</div>
+                      <div className="kidcard__count muted">
+                        {next.length === 0
+                          ? 'nothing coming up'
+                          : `${next.length} things in the next 2 weeks`}
+                      </div>
                     </div>
-                  </div>
-                  <span className="kidcard__chev">›</span>
+                  </Link>
+                  <Link
+                    to={`/add?person=${child.id}`}
+                    className="kidcard__plus"
+                    aria-label={`add something for ${child.name}`}
+                  >
+                    +
+                  </Link>
                 </div>
-                {preview.slice(0, 3).map((o) => (
-                  <div key={o.key} className="kidcard__line">
-                    <span className="muted">{relativeDay(o.date, day)}</span>
-                    <span>{o.entry.title}</span>
-                    <span className="muted">{o.allDay ? '' : timeLabel(o)}</span>
-                  </div>
-                ))}
-              </Link>
+                <Link to={`/kids/${child.id}`} className="kidcard__lines">
+                  {preview.slice(0, 3).map((o) => (
+                    <div key={o.key} className="kidcard__line">
+                      {/* "Wednesday 30 September" wraps a narrow card to three
+                          lines; past a week the short date says as much. */}
+                      <span className="muted">
+                        {diffDays(o.date, day) <= 7 ? relativeDay(o.date, day) : shortDate(o.date)}
+                      </span>
+                      <span>{o.entry.title}</span>
+                      <span className="muted">{o.allDay ? '' : timeLabel(o)}</span>
+                    </div>
+                  ))}
+                </Link>
+              </div>
             );
           })}
         </div>

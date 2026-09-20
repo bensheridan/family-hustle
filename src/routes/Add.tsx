@@ -49,6 +49,13 @@ export function AddPage() {
   // arriving with a kind already chosen means there is no picker to go back to
   const back = () => (presetKind ? navigate(-1) : setKind(null));
 
+  const forPerson = presetPerson ? state.people.find((p) => p.id === presetPerson) : undefined;
+  /* A seven-year-old does not have a roster. When the add flow already knows
+   * who it is for, it stops offering things that cannot apply to them. */
+  const kinds = forPerson && forPerson.role !== 'adult'
+    ? KINDS.filter((k) => k.kind !== 'shift')
+    : KINDS;
+
   const repeatLast = () => {
     const t = state.lastTemplate;
     if (!t) return;
@@ -65,7 +72,9 @@ export function AddPage() {
         <header className="topbar">
           <div>
             <div className="topbar__title">what are you adding?</div>
-            <div className="topbar__sub">few fields. fast entry. done.</div>
+            <div className="topbar__sub">
+              {forPerson ? `for ${forPerson.name}` : 'few fields. fast entry. done.'}
+            </div>
           </div>
           <button type="button" className="btn btn--sm btn--quiet" onClick={() => navigate(-1)}>
             cancel
@@ -80,7 +89,7 @@ export function AddPage() {
         )}
 
         <div className="onb__choices" style={{ marginTop: 14 }}>
-          {KINDS.map((k) => (
+          {kinds.map((k) => (
             <button
               key={k.kind}
               type="button"

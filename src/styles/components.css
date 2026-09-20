@@ -1301,3 +1301,42 @@
   padding: 9px 8px;
   min-width: 0;
 }
+
+/* a kid card opens the child, or adds something for them */
+.kidcard__headmain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.kidcard__plus {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.kidcard__plus:active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.kidcard__lines {
+  display: block;
+}
+
+.kidcard__line span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

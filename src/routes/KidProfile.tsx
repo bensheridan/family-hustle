@@ -75,9 +75,14 @@ export function KidProfile() {
             })()}
           </div>
         </div>
-        <Link className="btn btn--sm btn--quiet" to="/kids">
-          back
-        </Link>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Link className="btn btn--sm btn--ghost" to={`/add?person=${child.id}`}>
+            + add
+          </Link>
+          <Link className="btn btn--sm btn--quiet" to="/kids">
+            back
+          </Link>
+        </div>
       </header>
 
       <div className="card card--pad kidhero">
@@ -158,6 +163,23 @@ export function KidProfile() {
           </div>
         </section>
       ))}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+        <Link
+          className="btn btn--accent"
+          style={{ flex: 1 }}
+          to={`/add?kind=activity&person=${child.id}`}
+        >
+          add an activity
+        </Link>
+        <Link
+          className="btn btn--ghost"
+          style={{ flex: 1 }}
+          to={`/add?kind=appointment&person=${child.id}`}
+        >
+          add an appointment
+        </Link>
+      </div>
 
       {open && <EntrySheet occ={open} onClose={() => setOpen(null)} />}
     </>

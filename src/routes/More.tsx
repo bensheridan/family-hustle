@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { clearStorage, newId, useStore } from '../state/store';
 import { blankState, seedState } from '../data/seed';
 import { Avatar, Chip, SectionHead, Sheet, Toggle } from '../components/ui';
+import { PersonSheet } from '../components/PersonSheet';
+import { jobTypeLabel, schoolLevelLabel } from '../domain/school';
 import { PERSON_COLOURS, colourVar } from '../domain/categories';
 import type { HouseholdMode, Person, PersonRole } from '../types';
 
@@ -10,6 +12,7 @@ export function More() {
   const { state, dispatch, households, careEnabled } = useStore();
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Person | null>(null);
 
   // Answering this question changes nothing about the data. It is a hint
   // about what to show, not an instruction to restructure the family.
@@ -43,29 +46,21 @@ export function More() {
         />
         <div className="card">
           {state.people.map((p) => (
-            <div key={p.id} className="row">
+            <button key={p.id} type="button" className="row" onClick={() => setEditing(p)}>
               <Avatar person={p} />
               <span className="row__main">
                 <span className="row__title">{p.name}</span>
                 <span className="row__meta">
-                  {p.role}
-                  {p.worksShifts && <span>· works shifts</span>}
+                  {[
+                    p.role === 'child' ? schoolLevelLabel(p.schoolLevel) : jobTypeLabel(p.jobType),
+                    p.worksShifts ? 'shifts' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || p.role}
                 </span>
               </span>
-              <button
-                type="button"
-                className="btn btn--sm btn--quiet"
-                onClick={() =>
-                  dispatch({
-                    type: 'person/update',
-                    id: p.id,
-                    patch: { worksShifts: !p.worksShifts },
-                  })
-                }
-              >
-                {p.worksShifts ? 'work off' : 'work on'}
-              </button>
-            </div>
+              <span className="kidcard__chev">›</span>
+            </button>
           ))}
         </div>
       </section>
@@ -119,6 +114,21 @@ export function More() {
               {households.length === 1
                 ? 'one home · add another for a co-parent or a grandparent'
                 : `${households.length} homes${careEnabled ? ' · shared care set up' : ''}`}
+            </div>
+          </div>
+          <span className="kidcard__chev">›</span>
+        </Link>
+      </section>
+
+      <section className="section">
+        <SectionHead title="school" />
+        <Link className="card card--pad fridgecta" to="/school-terms">
+          <div>
+            <div className="row__title">term dates</div>
+            <div className="row__meta">
+              {state.schoolTerms.length === 0
+                ? 'not set · the holidays will arrive unannounced'
+                : `${state.schoolTerms.length} terms saved`}
             </div>
           </div>
           <span className="kidcard__chev">›</span>
@@ -182,6 +192,12 @@ export function More() {
       </section>
 
       {adding && <AddPersonSheet onClose={() => setAdding(false)} />}
+      {editing && (
+        <PersonSheet
+          person={state.people.find((p) => p.id === editing.id) ?? editing}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </>
   );
 }

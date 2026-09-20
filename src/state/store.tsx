@@ -8,6 +8,7 @@ import {
 } from 'react';
 import type {
   CareSchedule,
+  SchoolTerm,
   Entry,
   Household,
   Id,
@@ -30,6 +31,9 @@ type Action =
   | { type: 'household/remove'; id: Id }
   | { type: 'care/set'; schedule: CareSchedule }
   | { type: 'care/remove'; personId: Id }
+  | { type: 'terms/set'; terms: SchoolTerm[] }
+  | { type: 'terms/update'; id: Id; patch: Partial<SchoolTerm> }
+  | { type: 'terms/clear' }
   | { type: 'care/override'; personId: Id; date: ISODate; householdId: Id }
   | { type: 'care/clearOverride'; personId: Id; date: ISODate }
   | { type: 'care/cycleDay'; personId: Id; index: number; householdId: Id }
@@ -79,6 +83,20 @@ function reducer(state: State, action: Action): State {
           action.schedule,
         ],
       };
+
+    case 'terms/set':
+      return { ...state, schoolTerms: action.terms };
+
+    case 'terms/update':
+      return {
+        ...state,
+        schoolTerms: state.schoolTerms.map((t) =>
+          t.id === action.id ? { ...t, ...action.patch } : t,
+        ),
+      };
+
+    case 'terms/clear':
+      return { ...state, schoolTerms: [] };
 
     case 'care/remove':
       return {
@@ -199,6 +217,7 @@ function load(): State {
 function migrate(state: State): State {
   return {
     ...state,
+    schoolTerms: state.schoolTerms ?? [],
     // schedules saved before this applied to children only
     careSchedules: (state.careSchedules ?? []).map((c) => ({
       ...c,

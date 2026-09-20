@@ -16,6 +16,14 @@ export type Time = string;
 
 export type PersonRole = 'adult' | 'child' | 'pet';
 
+/** Where a child is at in their schooling. Drives what "school" means for
+ *  them — a daycare day and a high school day are not the same shape. */
+export type SchoolLevel = 'daycare' | 'primary' | 'intermediate' | 'high';
+
+/** What an adult's working life looks like. "chief housekeeper" is Emma's
+ *  phrase for the stay-at-home parent, and it is a better one than ours. */
+export type JobType = 'fullTime' | 'partTime' | 'housekeeper' | 'none';
+
 export type PersonColour =
   | 'purple'
   | 'blue'
@@ -37,6 +45,26 @@ export interface Person {
   /** Opt in per person. Until someone opts in, work never appears in the app. */
   worksShifts: boolean;
   birthday?: ISODate;
+  /** children only */
+  schoolLevel?: SchoolLevel;
+  schoolName?: string;
+  /** adults only */
+  jobType?: JobType;
+  jobTitle?: string;
+}
+
+/** One school term. Terms bracket the year for a family with children: the
+ *  holidays between them are the bit that needs planning. */
+export interface SchoolTerm {
+  id: Id;
+  /** 'Term 1' — a proper noun in the family's mouth */
+  name: string;
+  year: number;
+  start: ISODate;
+  end: ISODate;
+  /** true where the official dates are a window the school picks within, so
+   *  the app can say so rather than pretending to be certain */
+  approximate?: boolean;
 }
 
 export interface Household {
@@ -225,6 +253,8 @@ export interface State {
   entries: Entry[];
   /** One per child, only when shared care is on. */
   careSchedules: CareSchedule[];
+  /** Term dates, once a family has entered or imported them. */
+  schoolTerms: SchoolTerm[];
   /** Powers "repeat last" — the fastest way to add the thing you always add. */
   lastTemplate?: Template;
 }

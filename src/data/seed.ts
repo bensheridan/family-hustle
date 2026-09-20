@@ -23,20 +23,25 @@ export function seedState(): State {
 
   const nadia: Person = {
     id: 'p-nadia', name: 'Nadia', role: 'adult', colour: 'purple', worksShifts: true,
+    jobType: 'partTime', jobTitle: 'Brightwater Studio',
   };
   const theo: Person = {
     id: 'p-theo', name: 'Theo', role: 'adult', colour: 'blue', worksShifts: true,
+    jobType: 'fullTime', jobTitle: 'Central Station',
   };
   const otis: Person = {
     id: 'p-otis', name: 'Otis', role: 'child', colour: 'orange', worksShifts: false,
+    schoolLevel: 'primary', schoolName: 'Kowhai Primary',
     birthday: '2015-03-04',
   };
   const juno: Person = {
     id: 'p-juno', name: 'Juno', role: 'child', colour: 'green', worksShifts: false,
+    schoolLevel: 'primary', schoolName: 'Kowhai Primary',
     birthday: '2017-11-22',
   };
   const wren: Person = {
     id: 'p-wren', name: 'Wren', role: 'child', colour: 'pink', worksShifts: false,
+    schoolLevel: 'daycare', schoolName: 'Little Oaks',
     birthday: birthdaySoon,
   };
 
@@ -272,6 +277,7 @@ export function seedState(): State {
     people,
     entries,
     careSchedules: [],
+    schoolTerms: [],
   };
 }
 
@@ -288,5 +294,6 @@ export function blankState(): State {
     people: [],
     entries: [],
     careSchedules: [],
+    schoolTerms: [],
   };
 }

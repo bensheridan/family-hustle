@@ -1267,3 +1267,37 @@
   background: var(--surface-2);
   color: var(--ink-2);
 }
+
+/* ---------- person sheet & school terms ---------- */
+
+.personsheet__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.termrow__name {
+  font-weight: 680;
+  font-size: 15.5px;
+  border: none;
+  background: none;
+  padding: 0;
+  width: 8em;
+}
+
+.termrow__approx {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
+}
+
+/* two date inputs side by side need to fit a phone */
+.termrow__dates .input {
+  font-size: 13.5px;
+  padding: 9px 8px;
+  min-width: 0;
+}

@@ -14,6 +14,7 @@ import { Avatar, Empty, SectionHead } from '../components/ui';
 import { EntrySheet } from '../components/EntrySheet';
 import { WhosGotTheKids, moversHeading } from '../components/CareBits';
 import { filterForHousehold } from '../domain/care';
+import { nextSchoolChange, schoolChangeLine } from '../domain/school';
 import type { Occurrence } from '../types';
 
 /** The family command centre: what is happening today, what is coming up. */
@@ -49,8 +50,15 @@ export function Home() {
       })),
       // anything carrying a lead time — birthdays, renewals, annual things
       ...upcomingReminders(entries, state.people, day),
+      // the school year stopping or starting, which somebody has to cover
+      ...(() => {
+        const change = nextSchoolChange(state.schoolTerms, day, 21);
+        return change
+          ? [{ id: `school:${change.date}`, text: schoolChangeLine(change), tone: 'info' as const }]
+          : [];
+      })(),
     ],
-    [entries, state.people, day],
+    [entries, state.people, state.schoolTerms, day],
   );
 
   const byDay = groupByDate(upcoming);

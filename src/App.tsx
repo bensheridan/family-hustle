@@ -12,6 +12,7 @@ import { More } from './routes/More';
 import { Fridge } from './routes/Fridge';
 import { Households } from './routes/Households';
 import { ImportRoster } from './routes/ImportRoster';
+import { SchoolTerms } from './routes/SchoolTerms';
 import { PreviewBanner } from './components/CareBits';
 
 export function App() {
@@ -40,6 +41,7 @@ export function App() {
           <Route path="/more" element={<More />} />
           <Route path="/households" element={<Households />} />
           <Route path="/import-roster" element={<ImportRoster />} />
+          <Route path="/school-terms" element={<SchoolTerms />} />
           <Route path="/fridge" element={<Fridge />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

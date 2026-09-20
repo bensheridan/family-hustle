@@ -243,6 +243,8 @@ ul {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* a filter chip is a label, not a paragraph */
+  white-space: nowrap;
   padding: 6px 11px;
   border-radius: var(--r-pill);
   background: var(--surface-2);

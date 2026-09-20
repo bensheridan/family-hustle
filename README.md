@@ -136,6 +136,21 @@ src/
   styles/                  tokens, global, components, print
 ```
 
+The month view shows words, not dots. A grid of coloured dots tells you a day
+is busy; it does not tell you what with, which is the only reason to look at a
+month. Where a day has more than fits, **the rarest thing wins**: whatever
+happens on the fewest days is what makes one day different from the one before
+it, so School and Work give way to Cross Country and the dentist. The category
+filters thin it further — turning work off takes the demo month from 78 items
+to 54, and school off takes it to 22.
+
+Anything the family created can be edited, and editing reuses the form that
+created it: same questions, prefilled, one place to keep right rather than two
+that drift. A recurring entry says so before you save, because changing one
+changes all of them — *skip this one* is still there for the single occurrence.
+Derived entries (birthdays, public holidays) have no edit button, because the
+profile or the holiday list is the real record.
+
 Events, shifts and tasks share one `Entry` union so the calendar only ever has
 one kind of thing to draw. Categories (school/daycare, activity, appointment,
 family, work, task, shared care) are properties of an entry, not separate

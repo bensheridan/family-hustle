@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { Occurrence, Person } from '../types';
 import { useStore } from '../state/store';
 import { Avatar, Chip, Sheet } from '../components/ui';
@@ -10,6 +11,7 @@ import { ageOn, yearsSince } from '../domain/birthdays';
  *  because an event can belong to Otis and still be the whole family's problem. */
 export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => void }) {
   const { dispatch, personById, careEnabled, households, householdById } = useStore();
+  const navigate = useNavigate();
   const entry = occ.entry;
   const owners = entry.personIds.map(personById).filter((p): p is Person => Boolean(p));
   const repeats = entry.recurrence.kind !== 'none';
@@ -108,29 +110,43 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           </p>
         )}
 
-        <div className="detail__actions" style={entry.derived ? { display: 'none' } : undefined}>
-          {repeats && (
+        <div style={entry.derived ? { display: 'none' } : undefined}>
+          <button
+            type="button"
+            className="btn btn--accent btn--block"
+            style={{ marginTop: 22 }}
+            onClick={() => {
+              onClose();
+              navigate(`/add?edit=${entry.id}`);
+            }}
+          >
+            edit{repeats ? ' the whole series' : ''}
+          </button>
+
+          <div className="detail__actions" style={{ marginTop: 10 }}>
+            {repeats && (
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={() => {
+                  dispatch({ type: 'entry/skipDate', id: entry.id, date: occ.date });
+                  onClose();
+                }}
+              >
+                skip this one
+              </button>
+            )}
             <button
               type="button"
-              className="btn btn--ghost"
+              className="btn btn--danger"
               onClick={() => {
-                dispatch({ type: 'entry/skipDate', id: entry.id, date: occ.date });
+                dispatch({ type: 'entry/remove', id: entry.id });
                 onClose();
               }}
             >
-              skip this one
+              delete {repeats ? 'the series' : ''}
             </button>
-          )}
-          <button
-            type="button"
-            className="btn btn--danger"
-            onClick={() => {
-              dispatch({ type: 'entry/remove', id: entry.id });
-              onClose();
-            }}
-          >
-            delete {repeats ? 'the whole series' : ''}
-          </button>
+          </div>
         </div>
 
 

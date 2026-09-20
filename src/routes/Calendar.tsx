@@ -77,6 +77,15 @@ export function CalendarPage() {
 
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences]);
 
+  /* A month full of "School" and "Work" is true and useless. Whatever happens
+   * on the fewest days is what makes a day different from the one before it,
+   * so that is what gets the room. */
+  const rarity = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const o of occurrences) counts.set(o.entry.id, (counts.get(o.entry.id) ?? 0) + 1);
+    return counts;
+  }, [occurrences]);
+
   // Handovers are derived from the care schedules, never stored, so they can
   // never drift out of sync with the pattern they came from.
   const handovers = useMemo(() => {
@@ -192,6 +201,7 @@ export function CalendarPage() {
           cursor={cursor}
           byDate={byDate}
           handovers={handovers}
+          rarity={rarity}
           shades={shades}
           selected={selected}
           onSelect={setSelected}
@@ -311,6 +321,7 @@ function MonthView({
   cursor,
   byDate,
   handovers,
+  rarity,
   shades,
   selected,
   onSelect,
@@ -319,6 +330,7 @@ function MonthView({
   cursor: ISODate;
   byDate: Map<ISODate, Occurrence[]>;
   handovers: Map<ISODate, Handover[]>;
+  rarity: Map<string, number>;
   shades: Map<ISODate, string | undefined>;
   selected: ISODate;
   onSelect: (d: ISODate) => void;
@@ -340,8 +352,12 @@ function MonthView({
       </div>
       <div className="month__grid">
         {grid.map((d) => {
-          const occs = byDate.get(d) ?? [];
+          const all = byDate.get(d) ?? [];
           const outside = !isSameMonth(d, cursor);
+          // rarest first, so the distinctive thing about this day is visible
+          const occs = [...all].sort(
+            (a, b) => (rarity.get(a.entry.id) ?? 0) - (rarity.get(b.entry.id) ?? 0),
+          );
           return (
             <button
               key={d}
@@ -359,20 +375,29 @@ function MonthView({
                   ⇄
                 </span>
               )}
-              <span className="month__dots">
-                {occs.slice(0, 4).map((o) => {
+              {/* Words, not dots. A month of coloured dots tells you it is
+                  busy; it does not tell you what with, which is the only
+                  reason to look at a month at all. */}
+              <span className="month__items">
+                {occs.slice(0, 3).map((o) => {
                   const p = o.entry.personIds[0] ? personById(o.entry.personIds[0]) : undefined;
+                  const colour = p ? colourVar(p.colour) : CATEGORIES[o.entry.category].colour;
                   return (
                     <span
                       key={o.key}
-                      className="month__dot"
+                      className="month__item"
                       style={{
-                        background: p ? colourVar(p.colour) : CATEGORIES[o.entry.category].colour,
-                        opacity: o.isTail ? 0.4 : 1,
+                        background: `color-mix(in srgb, ${colour} 20%, transparent)`,
+                        borderLeftColor: colour,
+                        opacity: o.isTail ? 0.45 : 1,
                       }}
-                    />
+                      title={o.title}
+                    >
+                      {o.title}
+                    </span>
                   );
                 })}
+                {occs.length > 3 && <span className="month__more">+{occs.length - 3}</span>}
               </span>
             </button>
           );

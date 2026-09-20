@@ -39,6 +39,11 @@ export function AddPage() {
    * this for?" is already on screen behind you. Losing it and defaulting to
    * the first adult in the family is how you end up filing Theo's night shift
    * against Nadia. */
+  /* Editing reuses the form that created it: same questions, prefilled, and
+   * one place to keep right rather than two that drift. */
+  const editId = params.get('edit');
+  const editing = editId ? state.entries.find((e) => e.id === editId) : undefined;
+
   const presetKind = params.get('kind') as Kind | null;
   const presetPerson = params.get('person') ?? undefined;
   const [kind, setKind] = useState<Kind | null>(
@@ -64,6 +69,13 @@ export function AddPage() {
     });
     navigate('/');
   };
+
+  if (editing) {
+    const done = () => navigate(-1);
+    if (editing.type === 'shift') return <ShiftForm onBack={done} editing={editing} />;
+    if (editing.type === 'task') return <TaskForm onBack={done} editing={editing} />;
+    return <EventForm kind="event" onBack={done} editing={editing} />;
+  }
 
   if (!kind) {
     return (
@@ -116,10 +128,12 @@ function EventForm({
   kind,
   onBack,
   initialPersonId,
+  editing,
 }: {
   kind: Kind;
   onBack: () => void;
   initialPersonId?: Id;
+  editing?: EventEntry;
 }) {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
@@ -127,20 +141,25 @@ function EventForm({
   const defaultCategory: Category =
     kind === 'activity' ? 'activity' : kind === 'appointment' ? 'appointment' : 'family';
 
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<Category>(defaultCategory);
-  const [who, setWho] = useState<Id[]>(initialPersonId ? [initialPersonId] : []);
-  const [date, setDate] = useState(today());
-  const [allDay, setAllDay] = useState(false);
-  const [start, setStart] = useState('16:30');
-  const [end, setEnd] = useState('17:30');
-  const [where, setWhere] = useState('');
-  const [repeat, setRepeat] =
-    useState<'none' | 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'yearly'>('none');
-  const [remind, setRemind] = useState(0);
-  const [visibleToAll, setVisibleToAll] = useState(true);
-  const [prep, setPrep] = useState('');
-  const [households, setHouseholds] = useState<HouseholdVisibility>('both');
+  const [title, setTitle] = useState(editing?.title ?? '');
+  const [category, setCategory] = useState<Category>(editing?.category ?? defaultCategory);
+  const [who, setWho] = useState<Id[]>(
+    editing?.personIds ?? (initialPersonId ? [initialPersonId] : []),
+  );
+  const [date, setDate] = useState(editing?.startDate ?? today());
+  const [allDay, setAllDay] = useState(editing?.allDay ?? false);
+  const [start, setStart] = useState(editing?.startTime ?? '16:30');
+  const [end, setEnd] = useState(editing?.endTime ?? '17:30');
+  const [where, setWhere] = useState(editing?.location ?? '');
+  const [repeat, setRepeat] = useState<RepeatChoice>(
+    editing ? repeatOf(editing.recurrence) : 'none',
+  );
+  const [remind, setRemind] = useState(editing?.remindDaysBefore ?? 0);
+  const [visibleToAll, setVisibleToAll] = useState(editing ? editing.visibility === 'everyone' : true);
+  const [prep, setPrep] = useState(editing?.prepNote ?? '');
+  const [households, setHouseholds] = useState<HouseholdVisibility>(
+    editing?.householdVisibility ?? 'both',
+  );
 
   const { careEnabled } = useStore();
   const categories: Category[] = careEnabled
@@ -183,6 +202,11 @@ function EventForm({
       createdAt: Date.now(),
     };
 
+    if (editing) {
+      dispatch({ type: 'entry/update', id: editing.id, patch: { ...entry, id: editing.id } });
+      navigate(-1);
+      return;
+    }
     dispatch({ type: 'entry/add', entry });
     dispatch({
       type: 'template/set',
@@ -192,7 +216,13 @@ function EventForm({
   };
 
   return (
-    <FormShell title={`add ${kind}`} onBack={onBack} onSave={save} canSave={!!title.trim()}>
+    <FormShell
+      title={editing ? 'save changes' : `add ${kind}`}
+      onBack={onBack}
+      onSave={save}
+      canSave={!!title.trim()}
+      note={editing && editing.recurrence.kind !== 'none' ? 'changes apply to every one of these.' : undefined}
+    >
       <Field label="what?">
         <input
           className="input"
@@ -323,34 +353,41 @@ function EventForm({
 function ShiftForm({
   onBack,
   initialPersonId,
+  editing,
 }: {
   onBack: () => void;
   initialPersonId?: Id;
+  editing?: ShiftEntry;
 }) {
   const { state, dispatch, adults } = useStore();
   const navigate = useNavigate();
   const candidates = adults.length > 0 ? adults : state.people.filter((p) => p.role !== 'pet');
 
   const [personId, setPersonId] = useState<Id>(
-    candidates.some((c) => c.id === initialPersonId)
-      ? initialPersonId!
-      : candidates[0]?.id ?? '',
+    editing?.personIds[0] ??
+      (candidates.some((c) => c.id === initialPersonId)
+        ? initialPersonId!
+        : candidates[0]?.id ?? ''),
   );
-  const [shiftType, setShiftType] = useState<ShiftType>('day');
-  const [date, setDate] = useState(today());
-  const [start, setStart] = useState('09:00');
-  const [end, setEnd] = useState('17:00');
+  const [shiftType, setShiftType] = useState<ShiftType>(editing?.shiftType ?? 'day');
+  const [date, setDate] = useState(editing?.startDate ?? today());
+  const [start, setStart] = useState(editing?.startTime ?? '09:00');
+  const [end, setEnd] = useState(editing?.endTime ?? '17:00');
   // 'week' is first and default: most people work a standard week, and it was
   // previously the one thing this form could not express.
-  const [pattern, setPattern] = useState<'week' | 'none' | '4-4' | '7-7' | 'custom'>('week');
-  const [customOn, setCustomOn] = useState(3);
-  const [customOff, setCustomOff] = useState(2);
-  const [impacts, setImpacts] = useState<ShiftImpact[]>([]);
+  const [pattern, setPattern] = useState<'week' | 'none' | '4-4' | '7-7' | 'custom'>(
+    editing ? patternOf(editing) : 'week',
+  );
+  const [customOn, setCustomOn] = useState(
+    editing?.recurrence.kind === 'roster' ? editing.recurrence.on : 3,
+  );
+  const [customOff, setCustomOff] = useState(
+    editing?.recurrence.kind === 'roster' ? editing.recurrence.off : 2,
+  );
+  const [impacts, setImpacts] = useState<ShiftImpact[]>(editing?.impacts ?? []);
   /** weekday → not working | at work | from home */
-  const [week, setWeek] = useState<Record<number, DayMode>>({
-    1: 'onsite', 2: 'onsite', 3: 'onsite', 4: 'onsite', 5: 'onsite', 6: 'off', 7: 'off',
-  });
-  const [wfhAll, setWfhAll] = useState(false);
+  const [week, setWeek] = useState<Record<number, DayMode>>(() => weekOf(editing));
+  const [wfhAll, setWfhAll] = useState(editing?.wfh ?? false);
 
   const workingDays = WEEKDAYS.filter((d) => week[d.value] !== 'off').map((d) => d.value);
   const wfhDays = WEEKDAYS.filter((d) => week[d.value] === 'home').map((d) => d.value);
@@ -403,6 +440,12 @@ function ShiftForm({
       createdAt: Date.now(),
     };
 
+    if (editing) {
+      dispatch({ type: 'entry/update', id: editing.id, patch: { ...entry, id: editing.id } });
+      navigate(-1);
+      return;
+    }
+
     dispatch({ type: 'entry/add', entry });
     // Turn work on for this person — the work tab appears the moment it matters.
     if (person && !person.worksShifts) {
@@ -416,7 +459,13 @@ function ShiftForm({
   };
 
   return (
-    <FormShell title="add shift" onBack={onBack} onSave={save} canSave={!!personId}>
+    <FormShell
+      title={editing ? 'save changes' : 'add shift'}
+      onBack={onBack}
+      onSave={save}
+      canSave={!!personId}
+      note={editing && editing.recurrence.kind !== 'none' ? 'changes apply to every one of these.' : undefined}
+    >
       <FieldGroup label="who’s working?">
         <div className="choices">
           {candidates.map((p) => (
@@ -853,21 +902,28 @@ export function describeDays(days: number[]): string {
 function TaskForm({
   onBack,
   initialPersonId,
+  editing,
 }: {
   onBack: () => void;
   initialPersonId?: Id;
+  editing?: TaskEntry;
 }) {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
-  const [title, setTitle] = useState('');
-  const [who, setWho] = useState<Id[]>(initialPersonId ? [initialPersonId] : []);
-  const [date, setDate] = useState(today());
-  const [time, setTime] = useState('');
-  const [repeat, setRepeat] =
-    useState<'none' | 'weekly' | 'fortnightly' | 'monthly'>('none');
-  const [alternates, setAlternates] = useState<string[]>([]);
-  const [remind, setRemind] = useState(0);
-  const [households, setHouseholds] = useState<HouseholdVisibility>('both');
+  const [title, setTitle] = useState(editing?.title ?? '');
+  const [who, setWho] = useState<Id[]>(
+    editing?.personIds ?? (initialPersonId ? [initialPersonId] : []),
+  );
+  const [date, setDate] = useState(editing?.dueDate ?? today());
+  const [time, setTime] = useState(editing?.dueTime ?? '');
+  const [repeat, setRepeat] = useState<'none' | 'weekly' | 'fortnightly' | 'monthly'>(
+    editing ? (repeatOf(editing.recurrence) as 'none' | 'weekly' | 'fortnightly' | 'monthly') : 'none',
+  );
+  const [alternates, setAlternates] = useState<string[]>(editing?.alternates ?? []);
+  const [remind, setRemind] = useState(editing?.remindDaysBefore ?? 0);
+  const [households, setHouseholds] = useState<HouseholdVisibility>(
+    editing?.householdVisibility ?? 'both',
+  );
 
   const save = () => {
     const entry: TaskEntry = {
@@ -894,13 +950,28 @@ function TaskForm({
       exceptions: [],
       createdAt: Date.now(),
     };
+    if (editing) {
+      dispatch({
+        type: 'entry/update',
+        id: editing.id,
+        patch: { ...entry, id: editing.id, doneDates: editing.doneDates },
+      });
+      navigate(-1);
+      return;
+    }
     dispatch({ type: 'entry/add', entry });
     dispatch({ type: 'template/set', template: { label: entry.title, entry: stripIds(entry) } });
     navigate('/');
   };
 
   return (
-    <FormShell title="add task" onBack={onBack} onSave={save} canSave={!!title.trim()}>
+    <FormShell
+      title={editing ? 'save changes' : 'add task'}
+      onBack={onBack}
+      onSave={save}
+      canSave={!!title.trim()}
+      note={editing && editing.recurrence.kind !== 'none' ? 'changes apply to every one of these.' : undefined}
+    >
       <Field label="what?">
         <input
           className="input"
@@ -958,12 +1029,15 @@ function FormShell({
   onBack,
   onSave,
   canSave,
+  note,
   children,
 }: {
   title: string;
   onBack: () => void;
   onSave: () => void;
   canSave: boolean;
+  /** said once, above the button, where it cannot be missed */
+  note?: string;
   children: ReactNode;
 }) {
   return (
@@ -977,6 +1051,11 @@ function FormShell({
         </button>
       </header>
       <div style={{ marginTop: 14 }}>{children}</div>
+      {note && (
+        <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+          {note}
+        </p>
+      )}
       <button
         type="button"
         className="btn btn--accent btn--block"
@@ -1064,6 +1143,48 @@ const CATEGORY_LABEL: Record<Category, string> = {
   task: 'task',
   sharedCare: 'shared care',
 };
+
+/** Which pattern chip a stored shift came from. */
+function patternOf(shift: ShiftEntry): 'week' | 'none' | '4-4' | '7-7' | 'custom' {
+  const r = shift.recurrence;
+  if (r.kind === 'weekly') return 'week';
+  if (r.kind === 'roster') {
+    if (r.on === 4 && r.off === 4) return '4-4';
+    if (r.on === 7 && r.off === 7) return '7-7';
+    return 'custom';
+  }
+  return 'none';
+}
+
+/** The weekday picker, rebuilt from the worked days and the days at home. */
+function weekOf(shift: ShiftEntry | undefined): Record<number, DayMode> {
+  const base: Record<number, DayMode> =
+    shift && shift.recurrence.kind === 'weekly'
+      ? { 1: 'off', 2: 'off', 3: 'off', 4: 'off', 5: 'off', 6: 'off', 7: 'off' }
+      : { 1: 'onsite', 2: 'onsite', 3: 'onsite', 4: 'onsite', 5: 'onsite', 6: 'off', 7: 'off' };
+  if (!shift || shift.recurrence.kind !== 'weekly') return base;
+  for (const d of shift.recurrence.weekdays) base[d] = 'onsite';
+  for (const d of shift.wfhWeekdays ?? []) base[d] = 'home';
+  return base;
+}
+
+type RepeatChoice = 'none' | 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'yearly';
+
+/** The form's repeat chip, worked back out of a stored recurrence. */
+function repeatOf(r: Recurrence): RepeatChoice {
+  switch (r.kind) {
+    case 'daily':
+      return 'daily';
+    case 'weekly':
+      return r.interval === 2 ? 'fortnightly' : 'weekly';
+    case 'monthlyDay':
+      return 'monthly';
+    case 'yearly':
+      return 'yearly';
+    default:
+      return 'none';
+  }
+}
 
 function weekdayOf(iso: string): number {
   const [y, m, d] = iso.split('-').map(Number);

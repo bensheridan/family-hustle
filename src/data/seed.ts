@@ -295,6 +295,8 @@ export function seedState(): State {
       visibility: 'everyone',
       dueDate: d(2),
       dueTime: '19:00',
+      // rubbish one week, recycling the next — one arrangement, not two
+      alternates: ['rubbish', 'recycling'],
       recurrence: { kind: 'weekly', interval: 1, weekdays: [3] },
     }),
   ];

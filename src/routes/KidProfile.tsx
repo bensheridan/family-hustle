@@ -91,7 +91,7 @@ export function KidProfile() {
           <div className="kidhero__next">
             {upcoming[0] ? (
               <>
-                next up — <strong>{upcoming[0].entry.title}</strong>{' '}
+                next up — <strong>{upcoming[0].title}</strong>{' '}
                 {relativeDay(upcoming[0].date, day)}
               </>
             ) : (

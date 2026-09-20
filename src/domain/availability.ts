@@ -144,7 +144,7 @@ export function headsUpFor(
       if (!person) continue;
       out.push({
         id: `${ev.key}:${clash.key}:clash`,
-        text: `${person.name} is working and can't make ${ev.entry.title}.`,
+        text: `${person.name} is working and can't make ${ev.title}.`,
         tone: 'warn',
       });
     }
@@ -198,8 +198,8 @@ export function upcomingReminders(
     out.push({
       id: `${occ.key}:lead`,
       text: years
-        ? `${occ.entry.title} ${whenPhrase(days)} — ${years} years.`
-        : `${occ.entry.title} ${whenPhrase(days)}.`,
+        ? `${occ.title} ${whenPhrase(days)} — ${years} years.`
+        : `${occ.title} ${whenPhrase(days)}.`,
       tone: days <= 2 ? 'warn' : 'info',
     });
   }

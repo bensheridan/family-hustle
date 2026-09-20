@@ -80,7 +80,7 @@ export function OccurrenceRow({
           className="row__title"
           style={{ textDecoration: occ.done ? 'line-through' : undefined }}
         >
-          {occ.entry.title}
+          {occ.title}
         </div>
         <div className="row__meta">{meta.join(' · ')}</div>
       </button>

@@ -404,7 +404,7 @@ function FridgeItem({
       <span className="fridge-item__dot" style={{ background: colour }} />
       <span className="fridge-item__text">
         {showTime && time && <span className="fridge-item__time">{time}</span>}
-        <span className="fridge-item__title">{occ.entry.title}</span>
+        <span className="fridge-item__title">{occ.title}</span>
         {showName && name && <span className="fridge-item__who">{name}</span>}
       </span>
     </div>

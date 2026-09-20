@@ -74,7 +74,7 @@ export function Kids() {
                       <span className="muted">
                         {diffDays(o.date, day) <= 7 ? relativeDay(o.date, day) : shortDate(o.date)}
                       </span>
-                      <span>{o.entry.title}</span>
+                      <span>{o.title}</span>
                       <span className="muted">{o.allDay ? '' : timeLabel(o)}</span>
                     </div>
                   ))}

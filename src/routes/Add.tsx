@@ -19,15 +19,14 @@ import type {
   Visibility,
 } from '../types';
 
-type Kind = 'event' | 'shift' | 'task' | 'reminder' | 'appointment' | 'activity' | 'yearly';
+type Kind = 'event' | 'shift' | 'task' | 'appointment' | 'activity' | 'yearly';
 
 const KINDS: { kind: Kind; label: string; sub: string }[] = [
   { kind: 'event', label: 'event', sub: 'anything on the calendar' },
   { kind: 'activity', label: 'activity', sub: 'sport, club, lessons' },
   { kind: 'appointment', label: 'appointment', sub: 'doctor, dentist, car' },
   { kind: 'shift', label: 'shift', sub: 'work and rosters' },
-  { kind: 'task', label: 'task', sub: 'something to get done' },
-  { kind: 'reminder', label: 'reminder', sub: 'a nudge at a time' },
+  { kind: 'task', label: 'task', sub: 'something to get done, with or without a time' },
   { kind: 'yearly', label: 'once a year', sub: 'birthdays, anniversaries, renewals' },
 ];
 
@@ -107,8 +106,7 @@ export function AddPage() {
 
   if (kind === 'shift') return <ShiftForm onBack={back} initialPersonId={presetPerson} />;
   if (kind === 'yearly') return <YearlyForm onBack={back} />;
-  if (kind === 'task' || kind === 'reminder')
-    return <TaskForm kind={kind} onBack={back} initialPersonId={presetPerson} />;
+  if (kind === 'task') return <TaskForm onBack={back} initialPersonId={presetPerson} />;
   return <EventForm kind={kind} onBack={back} initialPersonId={presetPerson} />;
 }
 
@@ -550,6 +548,60 @@ function ShiftForm({
   );
 }
 
+/** Things that take turns.
+ *
+ * The bins are rubbish one week and recycling the next. That is one
+ * arrangement with two faces, not two separate reminders offset by a week —
+ * so it is one entry whose label changes each time round. */
+function AlternatesField({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const on = value.length > 0;
+  const at = (i: number) => value[i] ?? '';
+  const setAt = (i: number, v: string) => {
+    const next = [at(0), at(1)];
+    next[i] = v;
+    onChange(next);
+  };
+
+  return (
+    <FieldGroup
+      label="does it alternate?"
+      hint="for the bins: rubbish one week, recycling the next."
+    >
+      <div className="choices">
+        <Chip outline active={!on} onClick={() => onChange([])}>
+          it’s the same every time
+        </Chip>
+        <Chip outline active={on} onClick={() => onChange(value.length ? value : ['', ''])}>
+          it takes turns
+        </Chip>
+      </div>
+      {on && (
+        <div className="input-pair" style={{ marginTop: 10 }}>
+          <input
+            className="input"
+            value={at(0)}
+            onChange={(e) => setAt(0, e.target.value)}
+            placeholder="rubbish"
+          />
+          <span className="input-pair__arrow">then</span>
+          <input
+            className="input"
+            value={at(1)}
+            onChange={(e) => setAt(1, e.target.value)}
+            placeholder="recycling"
+          />
+        </div>
+      )}
+    </FieldGroup>
+  );
+}
+
 /* ---------------- once a year ---------------- */
 
 const LEAD_CHOICES = [
@@ -564,7 +616,7 @@ const LEAD_CHOICES = [
  *  the morning is finding out too late. */
 function RemindField({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
-    <FieldGroup label="tell me…" hint="a yearly thing is only useful if you hear about it early.">
+    <FieldGroup label="tell me…" hint="being told on the day is often too late to do anything about it.">
       <div className="choices">
         {LEAD_CHOICES.map((c) => (
           <Chip key={c.days} outline active={value === c.days} onClick={() => onChange(c.days)}>
@@ -799,11 +851,9 @@ export function describeDays(days: number[]): string {
 /* ---------------- task ---------------- */
 
 function TaskForm({
-  kind,
   onBack,
   initialPersonId,
 }: {
-  kind: Kind;
   onBack: () => void;
   initialPersonId?: Id;
 }) {
@@ -812,8 +862,11 @@ function TaskForm({
   const [title, setTitle] = useState('');
   const [who, setWho] = useState<Id[]>(initialPersonId ? [initialPersonId] : []);
   const [date, setDate] = useState(today());
-  const [time, setTime] = useState(kind === 'reminder' ? '18:00' : '');
-  const [weekly, setWeekly] = useState(false);
+  const [time, setTime] = useState('');
+  const [repeat, setRepeat] =
+    useState<'none' | 'weekly' | 'fortnightly' | 'monthly'>('none');
+  const [alternates, setAlternates] = useState<string[]>([]);
+  const [remind, setRemind] = useState(0);
   const [households, setHouseholds] = useState<HouseholdVisibility>('both');
 
   const save = () => {
@@ -828,7 +881,16 @@ function TaskForm({
       dueDate: date,
       dueTime: time || undefined,
       doneDates: [],
-      recurrence: weekly ? { kind: 'weekly', interval: 1, weekdays: [weekdayOf(date)] } : { kind: 'none' },
+      alternates: alternates.filter((a) => a.trim()).length > 1 ? alternates : undefined,
+      remindDaysBefore: remind > 0 ? remind : undefined,
+      recurrence:
+        repeat === 'weekly'
+          ? { kind: 'weekly', interval: 1, weekdays: [weekdayOf(date)] }
+          : repeat === 'fortnightly'
+            ? { kind: 'weekly', interval: 2, weekdays: [weekdayOf(date)] }
+            : repeat === 'monthly'
+              ? { kind: 'monthlyDay', day: Number(date.slice(8, 10)) }
+              : { kind: 'none' },
       exceptions: [],
       createdAt: Date.now(),
     };
@@ -838,13 +900,13 @@ function TaskForm({
   };
 
   return (
-    <FormShell title={`add ${kind}`} onBack={onBack} onSave={save} canSave={!!title.trim()}>
+    <FormShell title="add task" onBack={onBack} onSave={save} canSave={!!title.trim()}>
       <Field label="what?">
         <input
           className="input"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder={kind === 'reminder' ? 'Bins out' : 'Pay school trip'}
+          placeholder="Bins out"
           autoFocus
         />
       </Field>
@@ -861,14 +923,28 @@ function TaskForm({
 
       <FieldGroup label="repeat?">
         <div className="choices">
-          <Chip outline active={!weekly} onClick={() => setWeekly(false)}>
+          <Chip outline active={repeat === 'none'} onClick={() => setRepeat('none')}>
             just once
           </Chip>
-          <Chip outline active={weekly} onClick={() => setWeekly(true)}>
+          <Chip outline active={repeat === 'weekly'} onClick={() => setRepeat('weekly')}>
             every {dayName(date)}
+          </Chip>
+          <Chip
+            outline
+            active={repeat === 'fortnightly'}
+            onClick={() => setRepeat('fortnightly')}
+          >
+            every other {dayName(date)}
+          </Chip>
+          <Chip outline active={repeat === 'monthly'} onClick={() => setRepeat('monthly')}>
+            monthly on the {ordinal(Number(date.slice(8, 10)))}
           </Chip>
         </div>
       </FieldGroup>
+
+      {repeat !== 'none' && <AlternatesField value={alternates} onChange={setAlternates} />}
+
+      <RemindField value={remind} onChange={setRemind} />
 
       <HouseholdField value={households} onChange={setHouseholds} />
     </FormShell>

@@ -28,7 +28,7 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           .join(', ');
 
   return (
-    <Sheet title={entry.title} onClose={onClose}>
+    <Sheet title={occ.title} onClose={onClose}>
       <div className="detail">
         <div className="detail__when">
           <strong>{occ.crossesMidnight ? overnightLine(occ) : fullDate(occ.date)}</strong>

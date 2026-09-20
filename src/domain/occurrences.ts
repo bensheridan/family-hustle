@@ -94,12 +94,45 @@ export function worksFromHomeOn(shift: ShiftEntry, date: ISODate): boolean {
   return shift.wfh === true;
 }
 
+/** Which turn of the cycle this date is — how many repeats since the start.
+ *
+ * Only meaningful for the regular recurrences; anything irregular just stays
+ * on the first label rather than inventing an order. */
+function cycleIndex(entry: Entry, date: ISODate): number {
+  const start = entryStartDate(entry);
+  if (!start) return 0;
+  const r = entry.recurrence;
+  switch (r.kind) {
+    case 'weekly':
+      return Math.floor(diffDays(date, startOfWeekISO(start)) / 7 / Math.max(1, r.interval));
+    case 'daily':
+      return Math.floor(diffDays(date, start) / Math.max(1, r.interval));
+    case 'monthlyDay': {
+      const months =
+        (Number(date.slice(0, 4)) - Number(start.slice(0, 4))) * 12 +
+        (Number(date.slice(5, 7)) - Number(start.slice(5, 7)));
+      return months;
+    }
+    default:
+      return 0;
+  }
+}
+
+export function occurrenceTitle(entry: Entry, date: ISODate): string {
+  const turns = entry.alternates?.filter((a) => a.trim().length > 0) ?? [];
+  if (turns.length < 2) return entry.title;
+  const i = ((cycleIndex(entry, date) % turns.length) + turns.length) % turns.length;
+  return `${entry.title} — ${turns[i]}`;
+}
+
 function buildOccurrence(entry: Entry, date: ISODate): Occurrence {
+  const title = occurrenceTitle(entry, date);
   if (entry.type === 'shift') {
     const over = crossesMidnight(entry);
     return {
       key: `${entry.id}@${date}`,
       entry,
+      title,
       date,
       start: at(date, entry.startTime),
       end: at(over ? addDays(date, 1) : date, entry.endTime),
@@ -113,6 +146,7 @@ function buildOccurrence(entry: Entry, date: ISODate): Occurrence {
     return {
       key: `${entry.id}@${date}`,
       entry,
+      title,
       date,
       start: at(date, entry.dueTime),
       end: at(date, entry.dueTime),
@@ -127,6 +161,7 @@ function buildOccurrence(entry: Entry, date: ISODate): Occurrence {
   return {
     key: `${entry.id}@${date}`,
     entry,
+    title,
     date,
     start: at(date, entry.allDay ? undefined : entry.startTime),
     end: at(addDays(date, span - 1), entry.allDay ? undefined : entry.endTime ?? entry.startTime),
@@ -195,7 +230,7 @@ export function compareOccurrences(a: Occurrence, b: Occurrence): number {
   if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
   const t = a.start.getTime() - b.start.getTime();
   if (t !== 0) return t;
-  return a.entry.title.localeCompare(b.entry.title);
+  return a.title.localeCompare(b.title);
 }
 
 export function occurrencesOn(entries: Entry[], date: ISODate): Occurrence[] {

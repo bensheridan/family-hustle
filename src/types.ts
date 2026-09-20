@@ -155,6 +155,9 @@ interface EntryBase {
   location?: string;
   /** The "don't forget the gi 🥋" line. Drives the heads-up card. */
   prepNote?: string;
+  /** Labels that take turns, one per occurrence: the bins are rubbish one
+   *  week and recycling the next, which is one arrangement, not two. */
+  alternates?: string[];
   /** Say something this many days ahead. A birthday you hear about on the
    *  morning is already too late to do anything about. */
   remindDaysBefore?: number;
@@ -231,6 +234,9 @@ export type Entry = EventEntry | ShiftEntry | TaskEntry;
 export interface Occurrence {
   key: string;
   entry: Entry;
+  /** What to call this particular occurrence. Usually the entry's title, but
+   *  an alternating entry says something different each time round. */
+  title: string;
   /** The day this occurrence is anchored to. */
   date: ISODate;
   start: Date;

@@ -121,7 +121,7 @@ export function Work() {
                           )}
                         </div>
                         <div className="row__meta">
-                          {o.entry.title}
+                          {o.title}
                           {o.crossesMidnight && ` · finishes ${dayName(addDays(d, 1))}`}
                         </div>
                       </div>

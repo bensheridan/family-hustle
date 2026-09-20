@@ -45,4 +45,44 @@ for (const [label, ok] of cases) {
   if (!ok) { console.log(`FAIL ${label}`); failed++; }
 }
 console.log(failed === 0 ? `all ${cases.length} recurrence cases pass` : `\n${failed} of ${cases.length} FAILED`);
-process.exit(failed === 0 ? 0 : 1);
+if (failed > 0) process.exit(1);
+
+/* ---- alternating labels: the bins take turns ---- */
+import { occurrenceTitle } from '../src/domain/occurrences';
+import type { TaskEntry } from '../src/types';
+
+const bins: TaskEntry = {
+  id: 'b', type: 'task', title: 'Bins out', category: 'task', personIds: [],
+  visibility: 'everyone', dueDate: '2026-09-23', doneDates: [],
+  alternates: ['rubbish', 'recycling'],
+  recurrence: { kind: 'weekly', interval: 1, weekdays: [3] },
+  exceptions: [], createdAt: 0,
+};
+
+const altCases: [string, string][] = [
+  ['2026-09-23', 'Bins out — rubbish'],
+  ['2026-09-30', 'Bins out — recycling'],
+  ['2026-10-07', 'Bins out — rubbish'],
+  ['2026-10-14', 'Bins out — recycling'],
+  // months later it must still be in step: 2027-01-06 is week 15 from the
+  // start, and an odd week is recycling
+  ['2027-01-06', 'Bins out — recycling'],
+  ['2027-01-13', 'Bins out — rubbish'],
+];
+
+let altFailed = 0;
+for (const [date, want] of altCases) {
+  const got = occurrenceTitle(bins, date);
+  if (got !== want) { console.log(`FAIL alternates ${date}: wanted "${want}", got "${got}"`); altFailed++; }
+}
+
+// one label, or none, must leave the title alone
+const plain: TaskEntry = { ...bins, alternates: ['rubbish'] };
+if (occurrenceTitle(plain, '2026-09-30') !== 'Bins out') {
+  console.log('FAIL a single label should not be appended'); altFailed++;
+}
+
+console.log(altFailed === 0
+  ? `all ${altCases.length + 1} alternating cases pass`
+  : `${altFailed} alternating cases FAILED`);
+if (altFailed > 0) process.exit(1);

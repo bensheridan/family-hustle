@@ -210,6 +210,30 @@ their own Family hustle is a different problem, written up in
 [docs/co-parent-access.md](docs/co-parent-access.md) — including why the
 current default of "both households see it" is backwards for that case.
 
+## Your data
+
+Everything is one readable JSON file. Export it, put it in iCloud Drive or
+OneDrive or Dropbox, and the folder carries it between devices and backs it
+up. No account, no server, nobody else holding a family's movements. Open it
+in a text editor in ten years when this app no longer exists.
+
+Where the browser allows it — desktop Chrome and Edge, via the File System
+Access API — a file can be **linked**, and every change is written to it as it
+happens. Safari has no such API, so on an iPhone this is export and import by
+hand. The option only appears where it works rather than being offered and
+then failing.
+
+Importing shows what is in the file against what is on the device and replaces
+nothing until that has been looked at. A file that is not ours, is truncated,
+or was written by a newer version is refused with a reason rather than
+half-loaded.
+
+**What a file does not solve is two people editing at once.** A synced folder
+moves whole files and cannot see inside them: simultaneous changes produce a
+winner and a conflicted copy, never a merge. A file is a good way to keep and
+carry a family's data and not, on its own, a way for two people to share it
+live. That remains the sync problem, and choosing a file only moves it.
+
 ## Where to go next
 
 - real accounts and sync, which is what turns the household visibility model

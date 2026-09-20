@@ -13,6 +13,7 @@ import { Fridge } from './routes/Fridge';
 import { Households } from './routes/Households';
 import { ImportRoster } from './routes/ImportRoster';
 import { Year } from './routes/Year';
+import { Data } from './routes/Data';
 import { PreviewBanner } from './components/CareBits';
 
 export function App() {
@@ -42,6 +43,7 @@ export function App() {
           <Route path="/households" element={<Households />} />
           <Route path="/import-roster" element={<ImportRoster />} />
           <Route path="/year" element={<Year />} />
+          <Route path="/data" element={<Data />} />
           <Route path="/fridge" element={<Fridge />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

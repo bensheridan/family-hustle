@@ -152,6 +152,17 @@ export function More() {
       </section>
 
       <section className="section">
+        <SectionHead title="your data" />
+        <Link className="card card--pad fridgecta" to="/data">
+          <div>
+            <div className="row__title">export, import and backup</div>
+            <div className="row__meta">one file, yours to keep</div>
+          </div>
+          <span className="kidcard__chev">›</span>
+        </Link>
+      </section>
+
+      <section className="section">
         <SectionHead title="this prototype" />
         <div className="card">
           <button
@@ -190,7 +201,9 @@ export function More() {
           >
             <span className="row__main">
               <span className="row__title">clear saved data</span>
-              <span className="row__meta">everything lives in this browser only</span>
+              <span className="row__meta">
+                this browser only — export a copy from your data first
+              </span>
             </span>
           </button>
         </div>

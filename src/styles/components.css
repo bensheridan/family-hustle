@@ -1489,3 +1489,12 @@
   margin-top: 10px;
   padding-left: 16px;
 }
+
+.databanner {
+  margin-top: 10px;
+  padding: 10px 13px;
+  border-radius: var(--r-md);
+  background: var(--good-soft);
+  color: var(--ink);
+  font-size: 13.5px;
+}

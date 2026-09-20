@@ -33,10 +33,16 @@ export function OccurrenceRow({
   // so one row is always one line.
   const full = timeLabel(occ);
   const [startLabel, endLabel] = splitRange(full);
+  /* A middle day of a trip is not a separate event and not a blank: it is
+   * day three of five, which is the thing you actually want to know. */
+  const spansDays = occ.entry.type === 'event' ? occ.entry.spansDays ?? 1 : 1;
+  const dayOfSpan =
+    spansDays > 1 ? diffDaysBetween(isoOf(occ.start), occ.date) + 1 : undefined;
+
   const time = occ.isTail
     ? occ.entry.type === 'shift'
       ? `till ${endLabel ?? ''}`
-      : '—'
+      : 'all day'
     : occ.allDay
       ? 'all day'
       : startLabel;
@@ -47,13 +53,15 @@ export function OccurrenceRow({
     isTask && !occ.allDay ? time : null,
     people.length > 0 ? people.map((p) => p.name).join(', ') : null,
     occ.entry.location ?? null,
-    occ.isTail && occ.entry.type === 'shift'
-      ? `${dayName(shiftedBack(occ))}’s shift`
-      : occ.crossesMidnight
-        ? `overnight, till ${endLabel} ${dayName(tailDate(occ))}`
-        : endLabel && !isTask
-          ? `till ${endLabel}`
-          : null,
+    dayOfSpan
+      ? `day ${dayOfSpan} of ${spansDays}`
+      : occ.isTail && occ.entry.type === 'shift'
+        ? `${dayName(shiftedBack(occ))}’s shift`
+        : occ.crossesMidnight
+          ? `overnight, till ${endLabel} ${dayName(tailDate(occ))}`
+          : endLabel && !isTask
+            ? `till ${endLabel}`
+            : null,
   ].filter(Boolean) as string[];
 
   return (
@@ -107,6 +115,14 @@ function shiftedBack(occ: Occurrence): string {
 
 function tailDate(occ: Occurrence): string {
   return isoOf(occ.end);
+}
+
+function diffDaysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number);
+  const [by, bm, bd] = b.split('-').map(Number);
+  return Math.round(
+    (new Date(by, bm - 1, bd).getTime() - new Date(ay, am - 1, ad).getTime()) / 86400000,
+  );
 }
 
 function isoOf(d: Date): string {

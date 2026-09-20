@@ -4,7 +4,7 @@ import { newId, useStore } from '../state/store';
 import { Chip, Field, FieldGroup, Segmented } from '../components/ui';
 import { IMPACTS, SHIFT_TYPES, colourVar } from '../domain/categories';
 import { crossesMidnight } from '../domain/occurrences';
-import { dayName, formatTime, ordinal, today } from '../lib/date';
+import { addDays, dayName, diffDays, formatTime, ordinal, today } from '../lib/date';
 import type {
   Category,
   HouseholdVisibility,
@@ -147,6 +147,13 @@ function EventForm({
     editing?.personIds ?? (initialPersonId ? [initialPersonId] : []),
   );
   const [date, setDate] = useState(editing?.startDate ?? today());
+  /* A holiday or a week away is one thing that lasts, not seven copies of
+   * itself. The model has always been able to say so; nothing could set it. */
+  const [until, setUntil] = useState(
+    editing && (editing.spansDays ?? 1) > 1
+      ? addDays(editing.startDate, (editing.spansDays ?? 1) - 1)
+      : '',
+  );
   const [allDay, setAllDay] = useState(editing?.allDay ?? false);
   const [start, setStart] = useState(editing?.startTime ?? '16:30');
   const [end, setEnd] = useState(editing?.endTime ?? '17:30');
@@ -165,6 +172,8 @@ function EventForm({
   const categories: Category[] = careEnabled
     ? ['activity', 'school', 'appointment', 'family', 'sharedCare', 'moneyIn', 'moneyOut']
     : ['activity', 'school', 'appointment', 'family', 'moneyIn', 'moneyOut'];
+
+  const spans = until && until > date ? diffDays(until, date) + 1 : 1;
 
   const save = () => {
     const recurrence: Recurrence =
@@ -195,6 +204,7 @@ function EventForm({
       remindDaysBefore: remind > 0 ? remind : undefined,
       startDate: date,
       allDay,
+      spansDays: spans > 1 ? spans : undefined,
       startTime: allDay ? undefined : start,
       endTime: allDay ? undefined : end,
       recurrence,
@@ -245,14 +255,50 @@ function EventForm({
         </div>
       </FieldGroup>
 
-      <Field label="when?">
-        <input
-          className="input"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+      <FieldGroup label="when?">
+        <Segmented
+          value={until ? 'range' : 'one'}
+          onChange={(v) => {
+            if (v === 'one') setUntil('');
+            else setUntil(addDays(date, 1));
+          }}
+          options={[
+            { value: 'one', label: 'one day' },
+            { value: 'range', label: 'over several days' },
+          ]}
         />
-      </Field>
+        {until ? (
+          <div className="input-pair" style={{ marginTop: 10 }}>
+            <input
+              className="input"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+            <span className="input-pair__arrow">→</span>
+            <input
+              className="input"
+              type="date"
+              value={until}
+              min={date}
+              onChange={(e) => setUntil(e.target.value)}
+            />
+          </div>
+        ) : (
+          <input
+            className="input"
+            style={{ marginTop: 10 }}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        )}
+        {spans > 1 && (
+          <div className="field__hint">
+            {spans} days — it shows as one bar across the month, not {spans} separate entries.
+          </div>
+        )}
+      </FieldGroup>
 
       <FieldGroup label="time">
         <Segmented

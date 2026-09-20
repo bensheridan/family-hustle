@@ -144,6 +144,13 @@ it, so School and Work give way to Cross Country and the dentist. The category
 filters thin it further — turning work off takes the demo month from 78 items
 to 54, and school off takes it to 22.
 
+Something that lasts — a holiday, a week at Nana's, a school camp — is **one
+entry, not seven copies**. The form asks for an end date and the month draws a
+continuous bar across the days it covers, clipped and squared off where it runs
+into the week either side. Overlapping trips stack into lanes and the day cells
+below make room for them. In a day list a middle day reads *day 3 of 5* rather
+than repeating itself.
+
 Anything the family created can be edited, and editing reuses the form that
 created it: same questions, prefilled, one place to keep right rather than two
 that drift. A recurring entry says so before you save, because changing one

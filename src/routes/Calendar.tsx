@@ -5,6 +5,7 @@ import {
   addDays,
   addMonths,
   daysBetween,
+  diffDays,
   fullDate,
   isSameMonth,
   monthGrid,
@@ -28,7 +29,13 @@ import {
 } from '../components/CareBits';
 import { careBetween, filterForHousehold, handoversBetween } from '../domain/care';
 import type { Handover } from '../domain/care';
-import type { Category, Id, ISODate, Occurrence } from '../types';
+import type { Category, EventEntry, Id, ISODate, Occurrence } from '../types';
+
+interface Span {
+  occ: Occurrence;
+  from: ISODate;
+  to: ISODate;
+}
 
 type View = 'month' | 'week' | 'day';
 
@@ -64,16 +71,38 @@ export function CalendarPage() {
     return { from: grid[0], to: grid[41] };
   }, [view, cursor, state.settings.weekStartsMonday]);
 
-  const occurrences = useMemo(() => {
+  const visibleEntries = useMemo(() => {
     const visible = filterForHousehold(allEntries, state.settings);
-    const filtered = visible.filter((e) => {
+    return visible.filter((e) => {
       if (hidden.includes(e.category)) return false;
       if (!sharedCare && e.category === 'sharedCare') return false;
       if (person !== 'everyone' && !e.personIds.includes(person)) return false;
       return true;
     });
-    return expand(filtered, range.from, range.to);
-  }, [allEntries, state.settings, hidden, person, sharedCare, range.from, range.to]);
+  }, [allEntries, state.settings, hidden, person, sharedCare]);
+
+  const occurrences = useMemo(
+    () => expand(visibleEntries, range.from, range.to),
+    [visibleEntries, range.from, range.to],
+  );
+
+  /* Something lasting a week is one thing, so the month draws it as one bar.
+   * The search reaches well back, because a stay that began last month is
+   * still happening in this one. */
+  const spans = useMemo(() => {
+    const multi = visibleEntries.filter(
+      (e) => e.type === 'event' && (e.spansDays ?? 1) > 1,
+    );
+    if (multi.length === 0) return [] as Span[];
+    return expand(multi, addDays(range.from, -180), range.to, { includeTails: false })
+      .filter((o) => !o.isTail)
+      .map((o) => ({
+        occ: o,
+        from: o.date,
+        to: addDays(o.date, ((o.entry as EventEntry).spansDays ?? 1) - 1),
+      }))
+      .filter((s) => s.to >= range.from && s.from <= range.to);
+  }, [visibleEntries, range.from, range.to]);
 
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences]);
 
@@ -202,6 +231,7 @@ export function CalendarPage() {
           byDate={byDate}
           handovers={handovers}
           rarity={rarity}
+          spans={spans}
           shades={shades}
           selected={selected}
           onSelect={setSelected}
@@ -322,6 +352,7 @@ function MonthView({
   byDate,
   handovers,
   rarity,
+  spans,
   shades,
   selected,
   onSelect,
@@ -331,6 +362,7 @@ function MonthView({
   byDate: Map<ISODate, Occurrence[]>;
   handovers: Map<ISODate, Handover[]>;
   rarity: Map<string, number>;
+  spans: Span[];
   shades: Map<ISODate, string | undefined>;
   selected: ISODate;
   onSelect: (d: ISODate) => void;
@@ -338,6 +370,7 @@ function MonthView({
 }) {
   const { personById } = useStore();
   const grid = monthGrid(cursor, mondayFirst);
+  const weeks = Array.from({ length: 6 }, (_, w) => grid.slice(w * 7, w * 7 + 7));
   const heads = mondayFirst
     ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -350,56 +383,126 @@ function MonthView({
           <span key={h}>{h}</span>
         ))}
       </div>
+
       <div className="month__grid">
-        {grid.map((d) => {
-          const all = byDate.get(d) ?? [];
-          const outside = !isSameMonth(d, cursor);
-          // rarest first, so the distinctive thing about this day is visible
-          const occs = [...all].sort(
-            (a, b) => (rarity.get(a.entry.id) ?? 0) - (rarity.get(b.entry.id) ?? 0),
-          );
+        {weeks.map((week) => {
+          const weekFrom = week[0];
+          const weekTo = week[6];
+
+          /* Bars are laid out per week: a stay clipped to the days it covers
+           * here, stacked into lanes so two overlapping trips do not sit on
+           * top of each other. The cells below then make room for them. */
+          const laneEnds: number[] = [];
+          const bars = spans
+            .filter((s) => s.to >= weekFrom && s.from <= weekTo)
+            .map((s) => ({
+              span: s,
+              startCol: Math.max(0, diffDays(s.from, weekFrom)),
+              endCol: Math.min(6, diffDays(s.to, weekFrom)),
+            }))
+            .sort((a, b) => a.startCol - b.startCol || b.endCol - a.endCol)
+            .map((b) => {
+              let lane = laneEnds.findIndex((end) => end < b.startCol);
+              if (lane === -1) lane = laneEnds.length;
+              laneEnds[lane] = b.endCol;
+              return { ...b, lane };
+            });
+
           return (
-            <button
-              key={d}
-              type="button"
-              className="month__cell"
-              data-outside={outside}
-              data-today={d === now}
-              data-selected={d === selected}
-              style={{ '--care-tint': shades.get(d) ?? 'transparent' } as CSSProperties}
-              onClick={() => onSelect(d)}
+            <div
+              key={weekFrom}
+              className="month__week"
+              style={{ '--lanes': laneEnds.length } as CSSProperties}
             >
-              <span className="month__num">{Number(d.slice(8, 10))}</span>
-              {(handovers.get(d)?.length ?? 0) > 0 && (
-                <span className="month__handover" title="handover" aria-hidden>
-                  ⇄
-                </span>
-              )}
-              {/* Words, not dots. A month of coloured dots tells you it is
-                  busy; it does not tell you what with, which is the only
-                  reason to look at a month at all. */}
-              <span className="month__items">
-                {occs.slice(0, 3).map((o) => {
-                  const p = o.entry.personIds[0] ? personById(o.entry.personIds[0]) : undefined;
-                  const colour = p ? colourVar(p.colour) : CATEGORIES[o.entry.category].colour;
-                  return (
-                    <span
-                      key={o.key}
-                      className="month__item"
-                      style={{
-                        background: `color-mix(in srgb, ${colour} 20%, transparent)`,
-                        borderLeftColor: colour,
-                        opacity: o.isTail ? 0.45 : 1,
-                      }}
-                      title={o.title}
-                    >
-                      {o.title}
+              {week.map((d) => {
+                const all = byDate.get(d) ?? [];
+                const outside = !isSameMonth(d, cursor);
+                // whatever is drawn as a bar is not repeated as a chip
+                const occs = [...all]
+                  .filter((o) => !(o.entry.type === 'event' && (o.entry.spansDays ?? 1) > 1))
+                  .sort((a, b) => (rarity.get(a.entry.id) ?? 0) - (rarity.get(b.entry.id) ?? 0));
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className="month__cell"
+                    data-outside={outside}
+                    data-today={d === now}
+                    data-selected={d === selected}
+                    style={{ '--care-tint': shades.get(d) ?? 'transparent' } as CSSProperties}
+                    onClick={() => onSelect(d)}
+                  >
+                    <span className="month__num">{Number(d.slice(8, 10))}</span>
+                    {(handovers.get(d)?.length ?? 0) > 0 && (
+                      <span className="month__handover" title="handover" aria-hidden>
+                        ⇄
+                      </span>
+                    )}
+                    <span className="month__items">
+                      {occs.slice(0, 3).map((o) => {
+                        const p = o.entry.personIds[0]
+                          ? personById(o.entry.personIds[0])
+                          : undefined;
+                        const colour = p
+                          ? colourVar(p.colour)
+                          : CATEGORIES[o.entry.category].colour;
+                        return (
+                          <span
+                            key={o.key}
+                            className="month__item"
+                            style={{
+                              background: `color-mix(in srgb, ${colour} 20%, transparent)`,
+                              borderLeftColor: colour,
+                              opacity: o.isTail ? 0.45 : 1,
+                            }}
+                            title={o.title}
+                          >
+                            {o.title}
+                          </span>
+                        );
+                      })}
+                      {occs.length > 3 && (
+                        <span className="month__more">+{occs.length - 3}</span>
+                      )}
                     </span>
-                  );
-                })}
-                {occs.length > 3 && <span className="month__more">+{occs.length - 3}</span>}
-              </span>
-            </button>
+                  </button>
+                );
+              })}
+
+              {bars.length > 0 && (
+                <div className="month__spans">
+                  {bars.map((b) => {
+                    const p = b.span.occ.entry.personIds[0]
+                      ? personById(b.span.occ.entry.personIds[0])
+                      : undefined;
+                    const colour = p
+                      ? colourVar(p.colour)
+                      : CATEGORIES[b.span.occ.entry.category].colour;
+                    const startsHere = b.span.from >= weekFrom;
+                    const endsHere = b.span.to <= weekTo;
+                    return (
+                      <button
+                        key={b.span.occ.key}
+                        type="button"
+                        className="month__span"
+                        data-starts={startsHere}
+                        data-ends={endsHere}
+                        style={{
+                          gridColumn: `${b.startCol + 1} / ${b.endCol + 2}`,
+                          gridRow: b.lane + 1,
+                          background: `color-mix(in srgb, ${colour} 26%, transparent)`,
+                          borderColor: colour,
+                        }}
+                        title={b.span.occ.title}
+                        onClick={() => onSelect(b.span.from >= weekFrom ? b.span.from : weekFrom)}
+                      >
+                        {startsHere ? b.span.occ.title : `… ${b.span.occ.title}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

@@ -40,7 +40,8 @@ export function seedState(): State {
     birthday: birthdaySoon,
   };
 
-  const people = [nadia, theo, otis, juno, wren];
+  // everyone starts at the one home the family has
+  const people = [nadia, theo, otis, juno, wren].map((p) => ({ ...p, householdId: 'h-1' }));
   const everyone = people.map((p) => p.id);
 
   const event = (e: Omit<EventEntry, 'id' | 'type' | 'createdAt' | 'exceptions'>): EventEntry => ({
@@ -264,7 +265,6 @@ export function seedState(): State {
     settings: {
       onboarded: false,
       householdMode: 'one',
-      sharedCareEnabled: false,
       petsEnabled: false,
       weekStartsMonday: true,
     },
@@ -281,7 +281,6 @@ export function blankState(): State {
     settings: {
       onboarded: false,
       householdMode: 'undecided',
-      sharedCareEnabled: false,
       petsEnabled: false,
       weekStartsMonday: true,
     },

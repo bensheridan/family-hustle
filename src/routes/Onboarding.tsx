@@ -193,15 +193,15 @@ function Setup({ onNext }: { onNext: () => void }) {
   // Shared care is one option among four. It is never preselected.
   const options: { value: HouseholdMode; label: string; sub: string }[] = [
     { value: 'one', label: 'one household', sub: 'everyone under one roof' },
-    { value: 'multiple', label: 'multiple households', sub: 'family spread across homes' },
-    { value: 'sharedCare', label: 'shared care', sub: 'kids move between households' },
+    { value: 'multiple', label: 'more than one home', sub: 'family spread across places' },
+    { value: 'sharedCare', label: 'shared care', sub: 'some kids move between homes' },
     { value: 'undecided', label: 'I’ll decide later', sub: 'skip it — nothing changes' },
   ];
 
   const choose = (value: HouseholdMode) =>
     dispatch({
       type: 'settings',
-      patch: { householdMode: value, sharedCareEnabled: value === 'sharedCare' },
+      patch: { householdMode: value },
     });
 
   return (

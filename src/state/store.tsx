@@ -18,20 +18,18 @@ import type {
   Template,
 } from '../types';
 import { seedState } from '../data/seed';
-import { CARE_PATTERNS, makeSchedule, viewingHousehold } from '../domain/care';
+import { viewingHousehold } from '../domain/care';
 import { birthdayEntries } from '../domain/birthdays';
-import { today } from '../lib/date';
 
 const KEY = 'family-hustle:v1';
 
 type Action =
   | { type: 'settings'; patch: Partial<Settings> }
-  | { type: 'sharedCare/enable' }
-  | { type: 'sharedCare/disable' }
   | { type: 'household/add'; household: Household }
   | { type: 'household/update'; id: Id; patch: Partial<Household> }
   | { type: 'household/remove'; id: Id }
   | { type: 'care/set'; schedule: CareSchedule }
+  | { type: 'care/remove'; childId: Id }
   | { type: 'care/override'; childId: Id; date: ISODate; householdId: Id }
   | { type: 'care/clearOverride'; childId: Id; date: ISODate }
   | { type: 'care/cycleDay'; childId: Id; index: number; householdId: Id }
@@ -51,68 +49,6 @@ function reducer(state: State, action: Action): State {
     case 'settings':
       return { ...state, settings: { ...state.settings, ...action.patch } };
 
-    /* Turning shared care on hands the family something that already works:
-     * a second household and a week on / week off schedule per child. They
-     * change the pattern; they don't start from a blank screen. */
-    case 'sharedCare/enable': {
-      // Two adults is the common shape, and naming each home after the adult
-      // who lives there is what the kids would actually say. Better than
-      // making anyone rename "household 2".
-      const adults = state.people.filter((p) => p.role === 'adult');
-      const households =
-        state.households.length >= 2
-          ? state.households
-          : [
-              {
-                ...state.households[0],
-                name:
-                  !state.households[0] || state.households[0].name === 'Home'
-                    ? adults[0]
-                      ? `${adults[0].name}’s`
-                      : 'Home'
-                    : state.households[0].name,
-                colour: adults[0]?.colour ?? state.households[0]?.colour ?? 'purple',
-              },
-              {
-                id: newId(),
-                name: adults[1] ? `${adults[1].name}’s` : 'the other home',
-                colour: adults[1]?.colour ?? ('teal' as const),
-              },
-            ];
-      const [a, b] = households;
-      const children = state.people.filter((p) => p.role === 'child');
-      const careSchedules = children.map(
-        (child) =>
-          state.careSchedules.find((s) => s.childId === child.id) ??
-          makeSchedule(child.id, CARE_PATTERNS[0].id, a.id, b.id, today()),
-      );
-      return {
-        ...state,
-        households,
-        careSchedules,
-        settings: {
-          ...state.settings,
-          sharedCareEnabled: true,
-          householdMode: 'sharedCare',
-          homeHouseholdId: state.settings.homeHouseholdId ?? a.id,
-          viewingAsHouseholdId: undefined,
-        },
-      };
-    }
-
-    /* Off means gone from the interface, but the schedule is kept — turning
-     * it back on should not cost the family their setup. */
-    case 'sharedCare/disable':
-      return {
-        ...state,
-        settings: {
-          ...state.settings,
-          sharedCareEnabled: false,
-          householdMode: state.settings.householdMode === 'sharedCare' ? 'one' : state.settings.householdMode,
-          viewingAsHouseholdId: undefined,
-        },
-      };
-
     case 'household/add':
       return { ...state, households: [...state.households, action.household] };
 
@@ -128,6 +64,10 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         households: state.households.filter((h) => h.id !== action.id),
+        // anyone living there, and any child who moved there, comes unstuck
+        people: state.people.map((p) =>
+          p.householdId === action.id ? { ...p, householdId: undefined } : p,
+        ),
         careSchedules: state.careSchedules.filter((s) => !s.cycle.includes(action.id)),
       };
 
@@ -138,6 +78,12 @@ function reducer(state: State, action: Action): State {
           ...state.careSchedules.filter((s) => s.childId !== action.schedule.childId),
           action.schedule,
         ],
+      };
+
+    case 'care/remove':
+      return {
+        ...state,
+        careSchedules: state.careSchedules.filter((s) => s.childId !== action.childId),
       };
 
     case 'care/override':
@@ -258,6 +204,11 @@ function migrate(state: State): State {
       ...h,
       colour: h.colour ?? (i === 0 ? ('purple' as const) : ('teal' as const)),
     })),
+    // anyone saved before homes were assignable lives at the first one
+    people: (state.people ?? []).map((p) => ({
+      ...p,
+      householdId: p.householdId ?? state.households?.[0]?.id,
+    })),
   };
 }
 
@@ -276,6 +227,9 @@ interface Store {
   workers: Person[];
   /** true only when the family has switched shared care on */
   careEnabled: boolean;
+  /** true once the family has more than one home — which is a separate
+   *  question from whether any child moves between them */
+  multiHousehold: boolean;
   households: Household[];
   householdById: (id: Id | undefined) => Household | undefined;
   /** the household whose view is currently on screen */
@@ -297,7 +251,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Store>(() => {
     const people = state.people;
-    const careEnabled = state.settings.sharedCareEnabled;
+    /* Shared care is on for a family when a child actually moves between
+     * homes — not because a switch was flipped. Emma has three children and
+     * two of them go to their dad's; the third simply lives at home, and
+     * nothing about the app should suggest otherwise. */
+    const careEnabled = state.careSchedules.length > 0;
+    const multiHousehold = state.households.length > 1;
     return {
       state,
       dispatch,
@@ -308,9 +267,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       pets: people.filter((p) => p.role === 'pet'),
       workers: people.filter((p) => p.worksShifts),
       careEnabled,
+      multiHousehold,
       households: state.households,
       householdById: (id) => state.households.find((h) => h.id === id),
-      viewerHouseholdId: careEnabled ? viewingHousehold(state.settings) : undefined,
+      viewerHouseholdId: multiHousehold ? viewingHousehold(state.settings) : undefined,
     };
   }, [state]);
 

@@ -1114,3 +1114,18 @@
   padding: 2px 8px;
   flex: none;
 }
+
+/* household colour picker */
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 1px var(--line);
+  transition: transform 0.1s ease, border-color 0.14s ease;
+}
+
+.swatch[data-on='true'] {
+  border-color: var(--ink);
+  transform: scale(1.08);
+}

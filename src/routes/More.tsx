@@ -4,7 +4,6 @@ import { clearStorage, newId, useStore } from '../state/store';
 import { blankState, seedState } from '../data/seed';
 import { Avatar, Chip, SectionHead, Sheet, Toggle } from '../components/ui';
 import { PERSON_COLOURS, colourVar } from '../domain/categories';
-import { HouseholdDot } from '../components/CareBits';
 import type { HouseholdMode, Person, PersonRole } from '../types';
 
 export function More() {
@@ -12,18 +11,14 @@ export function More() {
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
 
-  const setMode = (mode: HouseholdMode) => {
-    if (mode === 'sharedCare') {
-      dispatch({ type: 'sharedCare/enable' });
-      return;
-    }
-    if (careEnabled) dispatch({ type: 'sharedCare/disable' });
+  // Answering this question changes nothing about the data. It is a hint
+  // about what to show, not an instruction to restructure the family.
+  const setMode = (mode: HouseholdMode) =>
     dispatch({ type: 'settings', patch: { householdMode: mode } });
-  };
 
   const modes: { value: HouseholdMode; label: string }[] = [
     { value: 'one', label: 'one household' },
-    { value: 'multiple', label: 'multiple households' },
+    { value: 'multiple', label: 'more than one home' },
     { value: 'sharedCare', label: 'shared care' },
     { value: 'undecided', label: 'not sure yet' },
   ];
@@ -101,14 +96,6 @@ export function More() {
         <SectionHead title="optional features" />
         <div className="card">
           <Toggle
-            label="shared care"
-            description="handovers, parenting schedules and visibility between households"
-            on={careEnabled}
-            onChange={(v) =>
-              dispatch({ type: v ? 'sharedCare/enable' : 'sharedCare/disable' })
-            }
-          />
-          <Toggle
             label="pets"
             description="vet visits, grooming, the dog’s medication"
             on={state.settings.petsEnabled}
@@ -123,55 +110,20 @@ export function More() {
         </div>
       </section>
 
-      {careEnabled && (
-        <section className="section">
-          <SectionHead title="shared care" />
-          <Link className="card card--pad fridgecta" to="/shared-care">
-            <div>
-              <div className="row__title">care schedule</div>
-              <div className="row__meta">patterns, handovers and households</div>
-            </div>
-            <span className="kidcard__chev">›</span>
-          </Link>
-
-          <div className="card" style={{ marginTop: 10 }}>
-            <div className="row" style={{ display: 'block' }}>
-              <div className="field__label" style={{ marginBottom: 8 }}>
-                check what the other household sees
-              </div>
-              <div className="choices">
-                {households.map((h) => {
-                  const viewing =
-                    (state.settings.viewingAsHouseholdId ?? state.settings.homeHouseholdId) === h.id;
-                  return (
-                    <Chip
-                      key={h.id}
-                      outline
-                      active={viewing}
-                      onClick={() =>
-                        dispatch({
-                          type: 'settings',
-                          patch: {
-                            viewingAsHouseholdId:
-                              h.id === state.settings.homeHouseholdId ? undefined : h.id,
-                          },
-                        })
-                      }
-                    >
-                      <HouseholdDot household={h} />
-                      {h.name}
-                    </Chip>
-                  );
-                })}
-              </div>
-              <div className="field__hint">
-                this only changes what you see. nothing is sent anywhere, and nothing changes for
-                them.
-              </div>
+      <section className="section">
+        <SectionHead title="households" />
+        <Link className="card card--pad fridgecta" to="/households">
+          <div>
+            <div className="row__title">homes and who lives where</div>
+            <div className="row__meta">
+              {households.length === 1
+                ? 'one home · add another for a co-parent or a grandparent'
+                : `${households.length} homes${careEnabled ? ' · shared care set up' : ''}`}
             </div>
           </div>
-        </section>
-      )}
+          <span className="kidcard__chev">›</span>
+        </Link>
+      </section>
 
       <section className="section">
         <SectionHead title="the fridge" />

@@ -42,7 +42,7 @@ export function CalendarPage() {
   const [selected, setSelected] = useState<ISODate>(today());
   const [moving, setMoving] = useState<Id | null>(null);
 
-  const sharedCare = state.settings.sharedCareEnabled;
+  const sharedCare = careEnabled;
 
   // Categories the family has actually opted into. Shared care stays out of
   // the filter bar entirely when it is switched off.

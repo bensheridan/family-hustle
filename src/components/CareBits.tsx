@@ -195,7 +195,7 @@ export function HandoverRows({ handovers }: { handovers: Handover[] }) {
         if (names.length === 0) return null;
 
         return (
-          <Link key={key} to="/shared-care" className="row handover">
+          <Link key={key} to="/households" className="row handover">
             <span className="row__rail" style={{ background: colourVar(to.colour) }} />
             <span className="row__time handover__icon" aria-hidden>
               ⇄
@@ -283,7 +283,7 @@ export function CareDaySheet({
 export function PreviewBanner() {
   const { state, dispatch, householdById } = useStore();
   const viewingAs = state.settings.viewingAsHouseholdId;
-  if (!state.settings.sharedCareEnabled || !viewingAs) return null;
+  if (!viewingAs) return null;
   if (viewingAs === state.settings.homeHouseholdId) return null;
   const household = householdById(viewingAs);
 

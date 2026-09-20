@@ -113,7 +113,8 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
   const [prep, setPrep] = useState('');
   const [households, setHouseholds] = useState<HouseholdVisibility>('both');
 
-  const categories: Category[] = state.settings.sharedCareEnabled
+  const { careEnabled } = useStore();
+  const categories: Category[] = careEnabled
     ? ['activity', 'school', 'appointment', 'family', 'sharedCare']
     : ['activity', 'school', 'appointment', 'family'];
 
@@ -886,8 +887,8 @@ function HouseholdField({
   value: HouseholdVisibility;
   onChange: (v: HouseholdVisibility) => void;
 }) {
-  const { careEnabled, households, state } = useStore();
-  if (!careEnabled || households.length < 2) return null;
+  const { multiHousehold, households, state } = useStore();
+  if (!multiHousehold) return null;
   const home = state.settings.homeHouseholdId ?? households[0].id;
   const homeName = households.find((h) => h.id === home)?.name ?? 'this household';
 

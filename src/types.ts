@@ -32,6 +32,7 @@ export interface Person {
   name: string;
   role: PersonRole;
   colour: PersonColour;
+  /** Which home they live at. Only meaningful once there is more than one. */
   householdId?: Id;
   /** Opt in per person. Until someone opts in, work never appears in the app. */
   worksShifts: boolean;
@@ -51,8 +52,6 @@ export type HouseholdMode = 'one' | 'multiple' | 'sharedCare' | 'undecided';
 export interface Settings {
   onboarded: boolean;
   householdMode: HouseholdMode;
-  /** Optional feature set. Off = the family barely knows it exists. */
-  sharedCareEnabled: boolean;
   petsEnabled: boolean;
   weekStartsMonday: boolean;
   /** The household this device belongs to. */

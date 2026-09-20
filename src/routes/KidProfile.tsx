@@ -101,7 +101,7 @@ export function KidProfile() {
           <SectionHead
             title="care schedule"
             action={
-              <Link className="section__link" to="/shared-care">
+              <Link className="section__link" to="/households">
                 change →
               </Link>
             }

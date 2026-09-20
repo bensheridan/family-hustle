@@ -205,11 +205,9 @@ export function visibleToHousehold(entry: Entry, householdId: Id | undefined): b
   return v.household === householdId;
 }
 
-export function filterForHousehold(
-  entries: Entry[],
-  settings: Settings,
-): Entry[] {
-  if (!settings.sharedCareEnabled) return entries;
+/* No gate needed: an entry with no household restriction is visible to
+ * everyone, so this is a no-op for a family with one home. */
+export function filterForHousehold(entries: Entry[], settings: Settings): Entry[] {
   const viewer = viewingHousehold(settings);
   return entries.filter((e) => visibleToHousehold(e, viewer));
 }
@@ -217,7 +215,6 @@ export function filterForHousehold(
 /** True when the user is looking at someone else's view of the app. */
 export function isPreviewing(settings: Settings): boolean {
   return (
-    settings.sharedCareEnabled &&
     !!settings.viewingAsHouseholdId &&
     settings.viewingAsHouseholdId !== settings.homeHouseholdId
   );

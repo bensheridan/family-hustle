@@ -10,7 +10,7 @@ import { KidProfile } from './routes/KidProfile';
 import { Work } from './routes/Work';
 import { More } from './routes/More';
 import { Fridge } from './routes/Fridge';
-import { SharedCare } from './routes/SharedCare';
+import { Households } from './routes/Households';
 import { PreviewBanner } from './components/CareBits';
 
 export function App() {
@@ -37,7 +37,7 @@ export function App() {
           <Route path="/kids/:id" element={<KidProfile />} />
           <Route path="/work" element={<Work />} />
           <Route path="/more" element={<More />} />
-          <Route path="/shared-care" element={<SharedCare />} />
+          <Route path="/households" element={<Households />} />
           <Route path="/fridge" element={<Fridge />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

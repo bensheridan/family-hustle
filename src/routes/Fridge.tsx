@@ -41,7 +41,7 @@ export function Fridge() {
     family: true,
     work: true,
     task: false,
-    sharedCare: state.settings.sharedCareEnabled,
+    sharedCare: true,
   });
   const [showTimes, setShowTimes] = useState(true);
   const [showNames, setShowNames] = useState(true);
@@ -316,7 +316,7 @@ export function Fridge() {
             onChange={(v) => setShow({ ...show, appointment: v })}
           />
           <Toggle label="tasks" on={show.task} onChange={(v) => setShow({ ...show, task: v })} />
-          {state.settings.sharedCareEnabled && (
+          {careEnabled && (
             <Toggle
               label="shared care"
               on={show.sharedCare}

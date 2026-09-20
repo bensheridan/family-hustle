@@ -104,7 +104,7 @@ export function Home() {
           <SectionHead
             title="who’s got the kids"
             action={
-              <Link className="section__link" to="/shared-care">
+              <Link className="section__link" to="/households">
                 schedule →
               </Link>
             }

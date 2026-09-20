@@ -165,7 +165,7 @@ export function Work() {
       </section>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-        <Link className="btn btn--accent" style={{ flex: 1 }} to="/add">
+        <Link className="btn btn--accent" style={{ flex: 1 }} to={`/add?kind=shift&person=${person.id}`}>
           add a shift
         </Link>
         <Link className="btn btn--ghost" style={{ flex: 1 }} to="/import-roster">

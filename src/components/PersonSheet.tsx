@@ -214,7 +214,7 @@ export function PersonSheet({ person, onClose }: { person: Person; onClose: () =
           className="btn btn--ghost"
           onClick={() => {
             onClose();
-            navigate('/add');
+            navigate(`/add?kind=activity&person=${person.id}`);
           }}
         >
           add an activity

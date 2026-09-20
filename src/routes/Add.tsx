@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { newId, useStore } from '../state/store';
 import { Chip, Field, FieldGroup, Segmented } from '../components/ui';
 import { IMPACTS, SHIFT_TYPES, colourVar } from '../domain/categories';
@@ -33,8 +33,21 @@ const KINDS: { kind: Kind; label: string; sub: string }[] = [
 
 export function AddPage() {
   const { state, dispatch } = useStore();
-  const [kind, setKind] = useState<Kind | null>(null);
+  const [params] = useSearchParams();
   const navigate = useNavigate();
+
+  /* Coming from someone's profile or their work week, the answer to "who is
+   * this for?" is already on screen behind you. Losing it and defaulting to
+   * the first adult in the family is how you end up filing Theo's night shift
+   * against Nadia. */
+  const presetKind = params.get('kind') as Kind | null;
+  const presetPerson = params.get('person') ?? undefined;
+  const [kind, setKind] = useState<Kind | null>(
+    presetKind && KINDS.some((k) => k.kind === presetKind) ? presetKind : null,
+  );
+
+  // arriving with a kind already chosen means there is no picker to go back to
+  const back = () => (presetKind ? navigate(-1) : setKind(null));
 
   const repeatLast = () => {
     const t = state.lastTemplate;
@@ -83,16 +96,24 @@ export function AddPage() {
     );
   }
 
-  if (kind === 'shift') return <ShiftForm onBack={() => setKind(null)} />;
-  if (kind === 'yearly') return <YearlyForm onBack={() => setKind(null)} />;
+  if (kind === 'shift') return <ShiftForm onBack={back} initialPersonId={presetPerson} />;
+  if (kind === 'yearly') return <YearlyForm onBack={back} />;
   if (kind === 'task' || kind === 'reminder')
-    return <TaskForm kind={kind} onBack={() => setKind(null)} />;
-  return <EventForm kind={kind} onBack={() => setKind(null)} />;
+    return <TaskForm kind={kind} onBack={back} initialPersonId={presetPerson} />;
+  return <EventForm kind={kind} onBack={back} initialPersonId={presetPerson} />;
 }
 
 /* ---------------- event ---------------- */
 
-function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
+function EventForm({
+  kind,
+  onBack,
+  initialPersonId,
+}: {
+  kind: Kind;
+  onBack: () => void;
+  initialPersonId?: Id;
+}) {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
 
@@ -101,7 +122,7 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>(defaultCategory);
-  const [who, setWho] = useState<Id[]>([]);
+  const [who, setWho] = useState<Id[]>(initialPersonId ? [initialPersonId] : []);
   const [date, setDate] = useState(today());
   const [allDay, setAllDay] = useState(false);
   const [start, setStart] = useState('16:30');
@@ -277,12 +298,22 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
 
 /* ---------------- shift ---------------- */
 
-function ShiftForm({ onBack }: { onBack: () => void }) {
+function ShiftForm({
+  onBack,
+  initialPersonId,
+}: {
+  onBack: () => void;
+  initialPersonId?: Id;
+}) {
   const { state, dispatch, adults } = useStore();
   const navigate = useNavigate();
   const candidates = adults.length > 0 ? adults : state.people.filter((p) => p.role !== 'pet');
 
-  const [personId, setPersonId] = useState<Id>(candidates[0]?.id ?? '');
+  const [personId, setPersonId] = useState<Id>(
+    candidates.some((c) => c.id === initialPersonId)
+      ? initialPersonId!
+      : candidates[0]?.id ?? '',
+  );
   const [shiftType, setShiftType] = useState<ShiftType>('day');
   const [date, setDate] = useState(today());
   const [start, setStart] = useState('09:00');
@@ -743,11 +774,19 @@ export function describeDays(days: number[]): string {
 
 /* ---------------- task ---------------- */
 
-function TaskForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
+function TaskForm({
+  kind,
+  onBack,
+  initialPersonId,
+}: {
+  kind: Kind;
+  onBack: () => void;
+  initialPersonId?: Id;
+}) {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
-  const [who, setWho] = useState<Id[]>([]);
+  const [who, setWho] = useState<Id[]>(initialPersonId ? [initialPersonId] : []);
   const [date, setDate] = useState(today());
   const [time, setTime] = useState(kind === 'reminder' ? '18:00' : '');
   const [weekly, setWeekly] = useState(false);

@@ -12,7 +12,7 @@ import {
 import { OccurrenceRow } from '../components/OccurrenceRow';
 import { Avatar, Empty, SectionHead } from '../components/ui';
 import { EntrySheet } from '../components/EntrySheet';
-import { WhosGotTheKids } from '../components/CareBits';
+import { WhosGotTheKids, moversHeading } from '../components/CareBits';
 import { filterForHousehold } from '../domain/care';
 import type { Occurrence } from '../types';
 
@@ -102,7 +102,7 @@ export function Home() {
       {careEnabled && (
         <section className="section">
           <SectionHead
-            title="who’s got the kids"
+            title={moversHeading(state.careSchedules, personById)}
             action={
               <Link className="section__link" to="/households">
                 schedule →

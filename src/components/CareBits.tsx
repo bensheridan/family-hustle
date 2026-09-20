@@ -35,6 +35,25 @@ export function careTint(colours: string[], strength = 16): string | undefined {
   return `linear-gradient(135deg, ${stops})`;
 }
 
+/** 'who’s got the kids' when children move, 'where Gracie is' when it is the
+ *  dog, and something that covers both when it is both. */
+export function moversHeading(
+  schedules: { personId: string }[],
+  personById: (id: string) => { name: string; role: string } | undefined,
+): string {
+  const movers = schedules.map((s) => personById(s.personId)).filter(Boolean) as {
+    name: string;
+    role: string;
+  }[];
+  if (movers.length === 0) return 'who’s where';
+  const kids = movers.filter((m) => m.role === 'child');
+  const animals = movers.filter((m) => m.role === 'pet');
+  if (kids.length > 0 && animals.length === 0) return 'who’s got the kids';
+  if (kids.length === 0 && animals.length === 1) return `where ${animals[0].name} is`;
+  if (kids.length === 0) return 'where the pets are';
+  return 'who’s where today';
+}
+
 export function HouseholdDot({ household, size = 10 }: { household: Household; size?: number }) {
   return (
     <span
@@ -45,19 +64,23 @@ export function HouseholdDot({ household, size = 10 }: { household: Household; s
   );
 }
 
-/** "who's got the kids" — the question shared care actually has to answer. */
+/** Who is where today — the question this whole feature exists to answer. */
 export function WhosGotTheKids({
   date = today(),
   onPick,
 }: {
   date?: ISODate;
   /** when given, each child becomes tappable so that one day can be moved */
-  onPick?: (childId: Id) => void;
+  onPick?: (personId: Id) => void;
 }) {
-  const { state, children, householdById, households, careEnabled } = useStore();
-  if (!careEnabled || children.length === 0) return null;
+  const { state, personById, householdById, households, careEnabled } = useStore();
+  if (!careEnabled) return null;
 
-  const rows = children
+  const movers = state.careSchedules
+    .map((s) => personById(s.personId))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+
+  const rows = movers
     .map((child) => {
       const schedule = scheduleFor(state.careSchedules, child.id);
       if (!schedule) return null;
@@ -133,13 +156,13 @@ export function CareDayLabel({
   if (!careEnabled) return null;
 
   const rows = careOnDate(state.careSchedules, date).filter(
-    (r) => !filterChildId || filterChildId === 'everyone' || r.childId === filterChildId,
+    (r) => !filterChildId || filterChildId === 'everyone' || r.personId === filterChildId,
   );
   if (rows.length === 0) return null;
 
   const byHousehold = new Map<Id, string[]>();
   for (const r of rows) {
-    const name = personById(r.childId)?.name;
+    const name = personById(r.personId)?.name;
     if (!name) continue;
     const list = byHousehold.get(r.householdId);
     if (list) list.push(name);
@@ -190,7 +213,7 @@ export function HandoverRows({ handovers }: { handovers: Handover[] }) {
         const to = householdById(group[0].to);
         if (!to) return null;
         const names = group
-          .map((h) => personById(h.childId)?.name)
+          .map((h) => personById(h.personId)?.name)
           .filter((n): n is string => Boolean(n));
         if (names.length === 0) return null;
 
@@ -222,17 +245,17 @@ export function joinNames(names: string[]): string {
 /** Moving one child for one day, without touching the pattern — the thing
  *  the setup screen tells you to come here for. */
 export function CareDaySheet({
-  childId,
+  personId,
   date,
   onClose,
 }: {
-  childId: Id;
+  personId: Id;
   date: ISODate;
   onClose: () => void;
 }) {
   const { state, dispatch, personById, households } = useStore();
-  const child = personById(childId);
-  const schedule = scheduleFor(state.careSchedules, childId);
+  const child = personById(personId);
+  const schedule = scheduleFor(state.careSchedules, personId);
   if (!child || !schedule) return null;
 
   const current = householdOn(schedule, date);
@@ -249,7 +272,7 @@ export function CareDaySheet({
               outline
               active={current === h.id}
               onClick={() => {
-                dispatch({ type: 'care/override', childId, date, householdId: h.id });
+                dispatch({ type: 'care/override', personId, date, householdId: h.id });
                 onClose();
               }}
             >
@@ -268,7 +291,7 @@ export function CareDaySheet({
           type="button"
           className="btn btn--ghost btn--block"
           onClick={() => {
-            dispatch({ type: 'care/clearOverride', childId, date });
+            dispatch({ type: 'care/clearOverride', personId, date });
             onClose();
           }}
         >

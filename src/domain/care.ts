@@ -64,7 +64,7 @@ export function patternById(id: string): CarePattern | undefined {
 }
 
 export function makeSchedule(
-  childId: Id,
+  personId: Id,
   patternId: string,
   a: Id,
   b: Id,
@@ -72,7 +72,7 @@ export function makeSchedule(
 ): CareSchedule {
   const pattern = patternById(patternId) ?? CARE_PATTERNS[0];
   return {
-    childId,
+    personId,
     patternId,
     cycle: pattern.build(a, b),
     // snap to a Monday so every pattern lines up with the week
@@ -92,7 +92,7 @@ export function householdOn(schedule: CareSchedule, date: ISODate): Id | undefin
 }
 
 export interface Handover {
-  childId: Id;
+  personId: Id;
   date: ISODate;
   from: Id;
   to: Id;
@@ -103,7 +103,7 @@ export function handoverOn(schedule: CareSchedule, date: ISODate): Handover | nu
   const to = householdOn(schedule, date);
   const from = householdOn(schedule, addDays(date, -1));
   if (!to || !from || to === from) return null;
-  return { childId: schedule.childId, date, from, to };
+  return { personId: schedule.personId, date, from, to };
 }
 
 export function handoversBetween(
@@ -128,21 +128,21 @@ export function handoversBetween(
 export function careOnDate(
   schedules: CareSchedule[],
   date: ISODate,
-): { childId: Id; householdId: Id }[] {
+): { personId: Id; householdId: Id }[] {
   return schedules
     .map((s) => {
       const householdId = householdOn(s, date);
-      return householdId ? { childId: s.childId, householdId } : null;
+      return householdId ? { personId: s.personId, householdId } : null;
     })
-    .filter((x): x is { childId: Id; householdId: Id } => x !== null);
+    .filter((x): x is { personId: Id; householdId: Id } => x !== null);
 }
 
 export function careBetween(
   schedules: CareSchedule[],
   from: ISODate,
   to: ISODate,
-): Map<ISODate, { childId: Id; householdId: Id }[]> {
-  const map = new Map<ISODate, { childId: Id; householdId: Id }[]>();
+): Map<ISODate, { personId: Id; householdId: Id }[]> {
+  const map = new Map<ISODate, { personId: Id; householdId: Id }[]>();
   let cursor = from;
   while (cursor <= to) {
     const row = careOnDate(schedules, cursor);
@@ -224,9 +224,9 @@ export function isPreviewing(settings: Settings): boolean {
 
 export function scheduleFor(
   schedules: CareSchedule[],
-  childId: Id,
+  personId: Id,
 ): CareSchedule | undefined {
-  return schedules.find((s) => s.childId === childId);
+  return schedules.find((s) => s.personId === personId);
 }
 
 /** The fortnight as day cells, for the pattern editor. */

@@ -61,7 +61,7 @@ export interface Settings {
   viewingAsHouseholdId?: Id;
 }
 
-/** Where a child is, day by day.
+/** Where someone is, day by day.
  *
  * A cycle of household ids repeating from an anchor Monday, which covers
  * week on/week off, 2-2-3, alternating weekends and anything hand-built —
@@ -69,7 +69,9 @@ export interface Settings {
  * Overrides handle the swapped weekend without touching the pattern.
  */
 export interface CareSchedule {
-  childId: Id;
+  /** A child moving between parents, or a dog that spends part of its week
+   *  at someone else's place. The schedule does not care which. */
+  personId: Id;
   /** one household id per day of the cycle */
   cycle: Id[];
   /** always a Monday, so weekend patterns line up */

@@ -32,7 +32,7 @@ import type { Household, Id } from '../types';
  * "on" must never assume it applies to all of them.
  */
 export function Households() {
-  const { state, dispatch, children, households, multiHousehold } = useStore();
+  const { state, dispatch, children, pets, households, multiHousehold } = useStore();
   const [editing, setEditing] = useState<Household | null>(null);
   const day = today();
 
@@ -47,6 +47,9 @@ export function Households() {
   };
 
   const peopleAt = (id: Id) => state.people.filter((p) => p.householdId === id);
+  /* Children move between parents; a dog can move too. Adults are left out
+   * not on principle but because nobody has asked for it. */
+  const movers = [...children, ...pets];
   const unassigned = state.people.filter((p) => !p.householdId);
 
   return (
@@ -145,16 +148,16 @@ export function Households() {
         </section>
       )}
 
-      {/* Shared care, asked one child at a time. */}
-      {multiHousehold && children.length > 0 && (
+      {/* Asked one at a time, because it is true of some and not others. */}
+      {multiHousehold && movers.length > 0 && (
         <section className="section">
-          <SectionHead title="the children" />
+          <SectionHead title="who moves between homes" />
           <p className="muted" style={{ fontSize: 13.5, marginBottom: 10 }}>
-            some children move between homes and some do not. this is asked for each of them
-            separately.
+            some move between homes and some do not — children, and the dog. this is asked for
+            each of them separately.
           </p>
-          {children.map((child) => (
-            <ChildCare key={child.id} childId={child.id} date={day} />
+          {movers.map((m) => (
+            <MoveArrangement key={m.id} personId={m.id} date={day} />
           ))}
         </section>
       )}
@@ -201,30 +204,30 @@ export function Households() {
   );
 }
 
-/** One child: do they move, and if so, how. */
-function ChildCare({ childId, date }: { childId: Id; date: string }) {
+/** One person or pet: do they move between homes, and if so, how. */
+function MoveArrangement({ personId, date }: { personId: Id; date: string }) {
   const { state, dispatch, households, personById } = useStore();
-  const child = personById(childId);
-  const schedule = scheduleFor(state.careSchedules, childId);
-  if (!child) return null;
+  const subject = personById(personId);
+  const schedule = scheduleFor(state.careSchedules, personId);
+  if (!subject) return null;
 
-  const base = households.find((h) => h.id === child.householdId) ?? households[0];
+  const base = households.find((h) => h.id === subject.householdId) ?? households[0];
   const other = households.find((h) => h.id !== base?.id) ?? households[1];
 
   const startMoving = () => {
     if (!base || !other) return;
     dispatch({
       type: 'care/set',
-      schedule: makeSchedule(childId, CARE_PATTERNS[0].id, base.id, other.id, date),
+      schedule: makeSchedule(personId, CARE_PATTERNS[0].id, base.id, other.id, date),
     });
   };
 
   return (
     <div className="card card--pad" style={{ marginBottom: 10 }}>
       <div className="carehero" style={{ marginBottom: 12 }}>
-        <Avatar person={child} size="lg" />
+        <Avatar person={subject} size="lg" />
         <div>
-          <div className="carehero__where">{child.name}</div>
+          <div className="carehero__where">{subject.name}</div>
           <div className="muted" style={{ fontSize: 13 }}>
             {schedule
               ? (() => {
@@ -241,7 +244,7 @@ function ChildCare({ childId, date }: { childId: Id; date: string }) {
       </div>
 
       <div className="choices">
-        <Chip outline active={!schedule} onClick={() => dispatch({ type: 'care/remove', childId })}>
+        <Chip outline active={!schedule} onClick={() => dispatch({ type: 'care/remove', personId })}>
           lives in one home
         </Chip>
         <Chip outline active={Boolean(schedule)} onClick={startMoving}>
@@ -264,7 +267,7 @@ function ChildCare({ childId, date }: { childId: Id; date: string }) {
                     type: 'care/set',
                     schedule: {
                       ...makeSchedule(
-                        childId,
+                        personId,
                         p.id,
                         schedule.cycle[0],
                         schedule.cycle.find((id) => id !== schedule.cycle[0]) ?? schedule.cycle[0],
@@ -286,7 +289,7 @@ function ChildCare({ childId, date }: { childId: Id; date: string }) {
           <div className="field__label" style={{ marginTop: 12 }}>
             tap any day to change it
           </div>
-          <CycleEditor childId={childId} />
+          <CycleEditor personId={personId} />
           <p className="field__hint">
             the fortnight repeats from {shortDate(schedule.anchorDate)}. changing a day here
             changes it every fortnight — to move one weekend only, change it on the calendar.
@@ -298,9 +301,9 @@ function ChildCare({ childId, date }: { childId: Id; date: string }) {
 }
 
 /** The repeating fortnight, as two rows of seven. */
-function CycleEditor({ childId }: { childId: Id }) {
+function CycleEditor({ personId }: { personId: Id }) {
   const { state, dispatch, households } = useStore();
-  const schedule = scheduleFor(state.careSchedules, childId);
+  const schedule = scheduleFor(state.careSchedules, personId);
   if (!schedule) return null;
 
   const nextHouseholdAfter = (current: Id): Id => {
@@ -323,7 +326,7 @@ function CycleEditor({ childId }: { childId: Id }) {
             onClick={() =>
               dispatch({
                 type: 'care/cycleDay',
-                childId,
+                personId,
                 index,
                 householdId: nextHouseholdAfter(householdId),
               })

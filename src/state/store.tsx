@@ -29,10 +29,10 @@ type Action =
   | { type: 'household/update'; id: Id; patch: Partial<Household> }
   | { type: 'household/remove'; id: Id }
   | { type: 'care/set'; schedule: CareSchedule }
-  | { type: 'care/remove'; childId: Id }
-  | { type: 'care/override'; childId: Id; date: ISODate; householdId: Id }
-  | { type: 'care/clearOverride'; childId: Id; date: ISODate }
-  | { type: 'care/cycleDay'; childId: Id; index: number; householdId: Id }
+  | { type: 'care/remove'; personId: Id }
+  | { type: 'care/override'; personId: Id; date: ISODate; householdId: Id }
+  | { type: 'care/clearOverride'; personId: Id; date: ISODate }
+  | { type: 'care/cycleDay'; personId: Id; index: number; householdId: Id }
   | { type: 'person/add'; person: Person }
   | { type: 'person/update'; id: Id; patch: Partial<Person> }
   | { type: 'person/remove'; id: Id }
@@ -75,7 +75,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         careSchedules: [
-          ...state.careSchedules.filter((s) => s.childId !== action.schedule.childId),
+          ...state.careSchedules.filter((s) => s.personId !== action.schedule.personId),
           action.schedule,
         ],
       };
@@ -83,14 +83,14 @@ function reducer(state: State, action: Action): State {
     case 'care/remove':
       return {
         ...state,
-        careSchedules: state.careSchedules.filter((s) => s.childId !== action.childId),
+        careSchedules: state.careSchedules.filter((s) => s.personId !== action.personId),
       };
 
     case 'care/override':
       return {
         ...state,
         careSchedules: state.careSchedules.map((s) =>
-          s.childId === action.childId
+          s.personId === action.personId
             ? { ...s, overrides: { ...s.overrides, [action.date]: action.householdId } }
             : s,
         ),
@@ -100,7 +100,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         careSchedules: state.careSchedules.map((s) => {
-          if (s.childId !== action.childId) return s;
+          if (s.personId !== action.personId) return s;
           const overrides = { ...s.overrides };
           delete overrides[action.date];
           return { ...s, overrides };
@@ -111,7 +111,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         careSchedules: state.careSchedules.map((s) => {
-          if (s.childId !== action.childId) return s;
+          if (s.personId !== action.personId) return s;
           const cycle = [...s.cycle];
           cycle[action.index] = action.householdId;
           // editing a day by hand means it is no longer a named pattern
@@ -199,7 +199,11 @@ function load(): State {
 function migrate(state: State): State {
   return {
     ...state,
-    careSchedules: state.careSchedules ?? [],
+    // schedules saved before this applied to children only
+    careSchedules: (state.careSchedules ?? []).map((c) => ({
+      ...c,
+      personId: c.personId ?? (c as unknown as { childId?: Id }).childId,
+    })),
     households: (state.households ?? []).map((h, i) => ({
       ...h,
       colour: h.colour ?? (i === 0 ? ('purple' as const) : ('teal' as const)),

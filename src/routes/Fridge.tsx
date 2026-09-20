@@ -12,7 +12,7 @@ import {
   today,
 } from '../lib/date';
 import { expand, groupByDate, timeLabel } from '../domain/occurrences';
-import { careOnDate, handoverOn, scheduleFor } from '../domain/care';
+import { careOnDate, handoverOn } from '../domain/care';
 import { colourVar } from '../domain/categories';
 import { Toggle } from '../components/ui';
 import { careTint, joinNames } from '../components/CareBits';
@@ -24,7 +24,7 @@ import type { Category, ISODate, Occurrence } from '../types';
  * Monday–Sunday grid, real dates, room to read it from across the kitchen.
  */
 export function Fridge() {
-  const { state, entries: allEntries, personById, householdById, children, careEnabled } = useStore();
+  const { state, entries: allEntries, personById, householdById, careEnabled } = useStore();
   const [params] = useSearchParams();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -66,9 +66,8 @@ export function Fridge() {
     const map = new Map<ISODate, { tint?: string; labels: string[] }>();
     if (!careEnabled || !show.sharedCare) return map;
 
-    const scheduled = children
-      .map((c) => scheduleFor(state.careSchedules, c.id))
-      .filter((s): s is NonNullable<typeof s> => Boolean(s));
+    // whoever actually moves — children, the dog, or both
+    const scheduled = state.careSchedules;
     if (scheduled.length === 0) return map;
 
     for (const [index, d] of grid.entries()) {
@@ -88,7 +87,7 @@ export function Fridge() {
       for (const schedule of scheduled) {
         const h = handoverOn(schedule, d);
         if (!h) continue;
-        const name = personById(schedule.childId)?.name;
+        const name = personById(schedule.personId)?.name;
         if (!name) continue;
         const list = arriving.get(h.to);
         if (list) list.push(name);
@@ -112,11 +111,11 @@ export function Fridge() {
       /* Every week also starts with the household named. Two tints of the
        * same lightness are the same grey once this is photocopied, so a
        * reader in black and white needs an anchor in every row — including
-       * for the children who did not move that day. */
+       * for whoever did not move that day. */
       if (index % 7 === 0) {
         const staying = new Map<string, string[]>();
         for (const r of row) {
-          const name = personById(r.childId)?.name;
+          const name = personById(r.personId)?.name;
           if (!name || moved.has(name)) continue;
           const list = staying.get(r.householdId);
           if (list) list.push(name);
@@ -142,7 +141,6 @@ export function Fridge() {
     state.careSchedules,
     grid,
     month,
-    children,
     householdById,
     personById,
   ]);

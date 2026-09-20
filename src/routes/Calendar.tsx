@@ -82,7 +82,7 @@ export function CalendarPage() {
   const handovers = useMemo(() => {
     if (!careEnabled || hidden.includes('sharedCare')) return new Map<ISODate, Handover[]>();
     const all = handoversBetween(state.careSchedules, range.from, range.to).filter(
-      (h) => person === 'everyone' || h.childId === person,
+      (h) => person === 'everyone' || h.personId === person,
     );
     const map = new Map<ISODate, Handover[]>();
     for (const h of all) {
@@ -102,7 +102,7 @@ export function CalendarPage() {
     if (!careEnabled || hidden.includes('sharedCare')) return map;
     const care = careBetween(state.careSchedules, range.from, range.to);
     for (const [date, row] of care) {
-      const relevant = person === 'everyone' ? row : row.filter((r) => r.childId === person);
+      const relevant = person === 'everyone' ? row : row.filter((r) => r.personId === person);
       const colours = relevant
         .map((r) => state.households.find((h) => h.id === r.householdId)?.colour)
         .filter((c): c is NonNullable<typeof c> => Boolean(c));
@@ -293,7 +293,7 @@ export function CalendarPage() {
       {open && <EntrySheet occ={open} onClose={() => setOpen(null)} />}
       {moving && (
         <CareDaySheet
-          childId={moving}
+          personId={moving}
           date={view === 'day' ? cursor : selected}
           onClose={() => setMoving(null)}
         />

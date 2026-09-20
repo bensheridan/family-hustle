@@ -10,6 +10,10 @@ place — plus a monthly export you can actually stick on the fridge.
 This repository is the working prototype. It runs entirely in the browser and
 stores everything in `localStorage`; there is no backend yet.
 
+**Try it:** https://bensheridan.github.io/family-hustle/ — open the demo family
+and have a look around. Everything you do stays in your own browser, so you
+cannot break it for anyone else, and nothing you type is sent anywhere.
+
 ## Running it
 
 ```bash

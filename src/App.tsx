@@ -11,6 +11,7 @@ import { Work } from './routes/Work';
 import { More } from './routes/More';
 import { Fridge } from './routes/Fridge';
 import { Households } from './routes/Households';
+import { ImportRoster } from './routes/ImportRoster';
 import { PreviewBanner } from './components/CareBits';
 
 export function App() {
@@ -38,6 +39,7 @@ export function App() {
           <Route path="/work" element={<Work />} />
           <Route path="/more" element={<More />} />
           <Route path="/households" element={<Households />} />
+          <Route path="/import-roster" element={<ImportRoster />} />
           <Route path="/fridge" element={<Fridge />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

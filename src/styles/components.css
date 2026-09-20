@@ -1129,3 +1129,141 @@
   border-color: var(--ink);
   transform: scale(1.08);
 }
+
+/* ---------- roster import ---------- */
+
+.howto {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.howto li + li {
+  margin-top: 4px;
+}
+
+.monthpick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 4px;
+}
+
+.monthpick__label {
+  font-weight: 680;
+  font-size: 15px;
+}
+
+.importwarn {
+  margin-top: 10px;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  background: var(--warn-soft);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.importgrid__heads {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.importgrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.importcell {
+  aspect-ratio: 1 / 1.15;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--p-blue) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 3px 1px;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.importcell[data-off='true'] {
+  background: var(--surface-2);
+}
+
+.importcell[data-spill='true'] {
+  opacity: 0.4;
+}
+
+.importcell[data-unread='true'] {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+}
+
+.importcell__day {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-3);
+  line-height: 1;
+}
+
+.importcell__times {
+  font-size: 9px;
+  font-weight: 640;
+  line-height: 1.25;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.importcell__unread {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--warn);
+}
+
+.importcell--editing {
+  aspect-ratio: auto;
+  grid-column: span 3;
+  gap: 3px;
+  padding: 5px;
+  background: var(--surface);
+  border-color: var(--ink);
+}
+
+.importcell__time {
+  width: 100%;
+  font-size: 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 2px;
+  background: var(--surface);
+}
+
+.importcell__actions {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.importcell__actions button {
+  flex: 1;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}

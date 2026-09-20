@@ -33,6 +33,9 @@ export function Work() {
         <Link className="btn btn--accent btn--block" to="/add">
           add a shift
         </Link>
+        <Link className="btn btn--ghost btn--block" to="/import-roster" style={{ marginTop: 8 }}>
+          import a month from a screenshot
+        </Link>
       </>
     );
   }
@@ -161,9 +164,14 @@ export function Work() {
         </div>
       </section>
 
-      <Link className="btn btn--accent btn--block" to="/add" style={{ marginTop: 14 }}>
-        add a shift
-      </Link>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <Link className="btn btn--accent" style={{ flex: 1 }} to="/add">
+          add a shift
+        </Link>
+        <Link className="btn btn--ghost" style={{ flex: 1 }} to="/import-roster">
+          import a month
+        </Link>
+      </div>
     </>
   );
 }

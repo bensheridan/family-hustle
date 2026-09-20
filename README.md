@@ -25,9 +25,10 @@ or open a demo family (Nadia, Theo, Otis, Juno and Wren — one household, one
 shift worker) to look around.
 
 ```bash
-npm run typecheck   # tsc, no emit
-npm run build       # typecheck + production build
-npm run preview     # serve the build
+npm run typecheck    # tsc, no emit
+npm run build        # typecheck + production build
+npm run preview      # serve the build
+npm run test:roster  # roster import, against the screen it was built from
 ```
 
 ## What is built

@@ -786,10 +786,71 @@
 
 .fridge-sheet__grid {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+
+/* one week, with a layer above it for anything lasting more than a day */
+.fridge-week {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
   gap: 5px;
+}
+
+.fridge-spans {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 20px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 13px;
+  gap: 5px;
+  row-gap: 2px;
+}
+
+.fridge-span {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: #17150f;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.fridge-span[data-starts='false'] {
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.fridge-span[data-ends='false'] {
+  border-right: none;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* the day's own contents sit below whatever crosses the week */
+.fridge-cell__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+  margin-top: calc(var(--lanes, 0) * 15px);
 }
 
 .fridge-cell {

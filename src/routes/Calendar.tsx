@@ -5,7 +5,6 @@ import {
   addDays,
   addMonths,
   daysBetween,
-  diffDays,
   fullDate,
   isSameMonth,
   monthGrid,
@@ -29,13 +28,8 @@ import {
 } from '../components/CareBits';
 import { careBetween, filterForHousehold, handoversBetween } from '../domain/care';
 import type { Handover } from '../domain/care';
-import type { Category, EventEntry, Id, ISODate, Occurrence } from '../types';
-
-interface Span {
-  occ: Occurrence;
-  from: ISODate;
-  to: ISODate;
-}
+import { collectSpans, isMultiDay, layoutWeek, laneCount, type Span } from '../domain/spans';
+import type { Category, Id, ISODate, Occurrence } from '../types';
 
 type View = 'month' | 'week' | 'day';
 
@@ -89,20 +83,10 @@ export function CalendarPage() {
   /* Something lasting a week is one thing, so the month draws it as one bar.
    * The search reaches well back, because a stay that began last month is
    * still happening in this one. */
-  const spans = useMemo(() => {
-    const multi = visibleEntries.filter(
-      (e) => e.type === 'event' && (e.spansDays ?? 1) > 1,
-    );
-    if (multi.length === 0) return [] as Span[];
-    return expand(multi, addDays(range.from, -180), range.to, { includeTails: false })
-      .filter((o) => !o.isTail)
-      .map((o) => ({
-        occ: o,
-        from: o.date,
-        to: addDays(o.date, ((o.entry as EventEntry).spansDays ?? 1) - 1),
-      }))
-      .filter((s) => s.to >= range.from && s.from <= range.to);
-  }, [visibleEntries, range.from, range.to]);
+  const spans = useMemo(
+    () => collectSpans(visibleEntries, range.from, range.to),
+    [visibleEntries, range.from, range.to],
+  );
 
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences]);
 
@@ -392,34 +376,20 @@ function MonthView({
           /* Bars are laid out per week: a stay clipped to the days it covers
            * here, stacked into lanes so two overlapping trips do not sit on
            * top of each other. The cells below then make room for them. */
-          const laneEnds: number[] = [];
-          const bars = spans
-            .filter((s) => s.to >= weekFrom && s.from <= weekTo)
-            .map((s) => ({
-              span: s,
-              startCol: Math.max(0, diffDays(s.from, weekFrom)),
-              endCol: Math.min(6, diffDays(s.to, weekFrom)),
-            }))
-            .sort((a, b) => a.startCol - b.startCol || b.endCol - a.endCol)
-            .map((b) => {
-              let lane = laneEnds.findIndex((end) => end < b.startCol);
-              if (lane === -1) lane = laneEnds.length;
-              laneEnds[lane] = b.endCol;
-              return { ...b, lane };
-            });
+          const bars = layoutWeek(spans, weekFrom, weekTo);
 
           return (
             <div
               key={weekFrom}
               className="month__week"
-              style={{ '--lanes': laneEnds.length } as CSSProperties}
+              style={{ '--lanes': laneCount(bars) } as CSSProperties}
             >
               {week.map((d) => {
                 const all = byDate.get(d) ?? [];
                 const outside = !isSameMonth(d, cursor);
                 // whatever is drawn as a bar is not repeated as a chip
                 const occs = [...all]
-                  .filter((o) => !(o.entry.type === 'event' && (o.entry.spansDays ?? 1) > 1))
+                  .filter((o) => !isMultiDay(o.entry))
                   .sort((a, b) => (rarity.get(a.entry.id) ?? 0) - (rarity.get(b.entry.id) ?? 0));
                 return (
                   <button
@@ -472,31 +442,29 @@ function MonthView({
               {bars.length > 0 && (
                 <div className="month__spans">
                   {bars.map((b) => {
-                    const p = b.span.occ.entry.personIds[0]
-                      ? personById(b.span.occ.entry.personIds[0])
+                    const p = b.occ.entry.personIds[0]
+                      ? personById(b.occ.entry.personIds[0])
                       : undefined;
                     const colour = p
                       ? colourVar(p.colour)
-                      : CATEGORIES[b.span.occ.entry.category].colour;
-                    const startsHere = b.span.from >= weekFrom;
-                    const endsHere = b.span.to <= weekTo;
+                      : CATEGORIES[b.occ.entry.category].colour;
                     return (
                       <button
-                        key={b.span.occ.key}
+                        key={b.occ.key}
                         type="button"
                         className="month__span"
-                        data-starts={startsHere}
-                        data-ends={endsHere}
+                        data-starts={b.startsHere}
+                        data-ends={b.endsHere}
                         style={{
                           gridColumn: `${b.startCol + 1} / ${b.endCol + 2}`,
                           gridRow: b.lane + 1,
                           background: `color-mix(in srgb, ${colour} 26%, transparent)`,
                           borderColor: colour,
                         }}
-                        title={b.span.occ.title}
-                        onClick={() => onSelect(b.span.from >= weekFrom ? b.span.from : weekFrom)}
+                        title={b.occ.title}
+                        onClick={() => onSelect(b.startsHere ? b.from : weekFrom)}
                       >
-                        {startsHere ? b.span.occ.title : `… ${b.span.occ.title}`}
+                        {b.startsHere ? b.occ.title : `… ${b.occ.title}`}
                       </button>
                     );
                   })}

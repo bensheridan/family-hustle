@@ -13,6 +13,7 @@ import {
 } from '../lib/date';
 import { expand, groupByDate, timeLabel } from '../domain/occurrences';
 import { careOnDate, handoverOn } from '../domain/care';
+import { collectSpans, isMultiDay, layoutWeek, laneCount } from '../domain/spans';
 import { colourVar } from '../domain/categories';
 import { Toggle } from '../components/ui';
 import { careTint, joinNames } from '../components/CareBits';
@@ -55,10 +56,21 @@ export function Fridge() {
     [month, state.settings.weekStartsMonday],
   );
 
-  const byDate = useMemo(() => {
-    const entries = allEntries.filter((e) => show[e.category]);
-    return groupByDate(expand(entries, grid[0], grid[41], { includeTails: false }));
-  }, [allEntries, show, grid]);
+  const shown = useMemo(() => allEntries.filter((e) => show[e.category]), [allEntries, show]);
+
+  const byDate = useMemo(
+    () => groupByDate(expand(shown, grid[0], grid[41], { includeTails: false })),
+    [shown, grid],
+  );
+
+  /* A week away is one thing on paper too, so it is drawn as one bar rather
+   * than repeated in every square it touches. */
+  const spans = useMemo(() => collectSpans(shown, grid[0], grid[41]), [shown, grid]);
+
+  const weeks = useMemo(
+    () => Array.from({ length: 6 }, (_, w) => grid.slice(w * 7, w * 7 + 7)),
+    [grid],
+  );
 
   /* Care on paper.
    *
@@ -249,50 +261,91 @@ export function Fridge() {
             </div>
 
             <div className="fridge-sheet__grid">
-              {grid.map((d) => {
-                const occs = byDate.get(d) ?? [];
-                const outside = !isSameMonth(d, month);
-                const care = careByDate.get(d);
+              {weeks.map((week) => {
+                const weekFrom = week[0];
+                const weekTo = week[6];
+                const bars = layoutWeek(spans, weekFrom, weekTo);
                 return (
                   <div
-                    key={d}
-                    className="fridge-cell"
-                    data-outside={outside}
-                    style={{ '--care-tint': care?.tint ?? 'transparent' } as CSSProperties}
+                    key={weekFrom}
+                    className="fridge-week"
+                    style={{ '--lanes': laneCount(bars) } as CSSProperties}
                   >
-                    <div className="fridge-cell__num">{Number(d.slice(8, 10))}</div>
-                    {care && care.labels.length > 0 && (
-                      <div className="fridge-cell__carelabel">
-                        {care.labels.map((l) => (
-                          <span key={l}>{l}</span>
-                        ))}
+                    {week.map((d) => {
+                      const occs = (byDate.get(d) ?? []).filter((o) => !isMultiDay(o.entry));
+                      const outside = !isSameMonth(d, month);
+                      const care = careByDate.get(d);
+                      return (
+                        <div
+                          key={d}
+                          className="fridge-cell"
+                          data-outside={outside}
+                          style={{ '--care-tint': care?.tint ?? 'transparent' } as CSSProperties}
+                        >
+                          <div className="fridge-cell__num">{Number(d.slice(8, 10))}</div>
+                          <div className="fridge-cell__body">
+                            {care && care.labels.length > 0 && (
+                              <div className="fridge-cell__carelabel">
+                                {care.labels.map((l) => (
+                                  <span key={l}>{l}</span>
+                                ))}
+                              </div>
+                            )}
+                            <div className="fridge-cell__items">
+                              {occs.slice(0, 5).map((o) => (
+                                <FridgeItem
+                                  key={o.key}
+                                  occ={o}
+                                  showTime={showTimes}
+                                  showName={showNames}
+                                  colour={
+                                    o.entry.personIds[0]
+                                      ? colourVar(personById(o.entry.personIds[0])?.colour ?? 'purple')
+                                      : 'var(--ink-3)'
+                                  }
+                                  name={
+                                    o.entry.personIds.length === 1
+                                      ? personById(o.entry.personIds[0])?.name
+                                      : undefined
+                                  }
+                                />
+                              ))}
+                              {occs.length > 5 && (
+                                <div className="fridge-item fridge-item--more">
+                                  +{occs.length - 5} more
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {bars.length > 0 && (
+                      <div className="fridge-spans">
+                        {bars.map((b) => {
+                          const colour = b.occ.entry.personIds[0]
+                            ? colourVar(personById(b.occ.entry.personIds[0])?.colour ?? 'purple')
+                            : '#6f685d';
+                          return (
+                            <div
+                              key={b.occ.key}
+                              className="fridge-span"
+                              data-starts={b.startsHere}
+                              data-ends={b.endsHere}
+                              style={{
+                                gridColumn: `${b.startCol + 1} / ${b.endCol + 2}`,
+                                gridRow: b.lane + 1,
+                                background: `color-mix(in srgb, ${colour} 22%, #fff)`,
+                                borderColor: colour,
+                              }}
+                            >
+                              {b.startsHere ? b.occ.title : `… ${b.occ.title}`}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
-                    <div className="fridge-cell__items">
-                      {occs.slice(0, 5).map((o) => (
-                        <FridgeItem
-                          key={o.key}
-                          occ={o}
-                          showTime={showTimes}
-                          showName={showNames}
-                          colour={
-                            o.entry.personIds[0]
-                              ? colourVar(personById(o.entry.personIds[0])?.colour ?? 'purple')
-                              : 'var(--ink-3)'
-                          }
-                          name={
-                            o.entry.personIds.length === 1
-                              ? personById(o.entry.personIds[0])?.name
-                              : undefined
-                          }
-                        />
-                      ))}
-                      {occs.length > 5 && (
-                        <div className="fridge-item fridge-item--more">
-                          +{occs.length - 5} more
-                        </div>
-                      )}
-                    </div>
                   </div>
                 );
               })}

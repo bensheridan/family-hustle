@@ -232,7 +232,13 @@ half-loaded.
 moves whole files and cannot see inside them: simultaneous changes produce a
 winner and a conflicted copy, never a merge. A file is a good way to keep and
 carry a family's data and not, on its own, a way for two people to share it
-live. That remains the sync problem, and choosing a file only moves it.
+live.
+
+Where one person edits and the others read — which is the common shape — that
+limitation does not bite, because there is nothing to merge. Sharing it
+properly is written up in [docs/pi-sync.md](docs/pi-sync.md): a small service
+on a Raspberry Pi holding exactly the same backup document, with a write token
+for the person who edits and a read token for everyone else.
 
 ## Where to go next
 

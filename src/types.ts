@@ -127,6 +127,9 @@ interface EntryBase {
   /** Say something this many days ahead. A birthday you hear about on the
    *  morning is already too late to do anything about. */
   remindDaysBefore?: number;
+  /** Count the years since it started, the way an anniversary does. A
+   *  renewal does not want this; a wedding does. */
+  marksYears?: boolean;
   /** Generated from somewhere else — a person's birthday, say — rather than
    *  created by hand. Derived entries cannot be edited or deleted on the
    *  calendar, because the thing that produced them is the real record. */

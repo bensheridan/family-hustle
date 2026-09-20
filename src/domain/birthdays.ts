@@ -37,6 +37,13 @@ export function birthdayEntries(people: Person[]): EventEntry[] {
     }));
 }
 
+/** How many years since a yearly thing started — 11 for a wedding in 2015
+ *  seen in 2026. The point of an anniversary. */
+export function yearsSince(startDate: ISODate, date: ISODate): number | undefined {
+  const years = Number(date.slice(0, 4)) - Number(startDate.slice(0, 4));
+  return years > 0 && years < 200 ? years : undefined;
+}
+
 /** How old they are turning on that date. Undefined if we only know the day
  *  and month, or if the birthday is in the future (an expected baby). */
 export function ageOn(person: Person, date: ISODate): number | undefined {
@@ -71,9 +78,4 @@ export function birthdayLine(person: Person, date: ISODate, from: ISODate = toda
 export function daysUntilBirthday(person: Person, from: ISODate = today()): number | undefined {
   const next = nextBirthday(person, from);
   return next ? diffDays(next, from) : undefined;
-}
-
-export function isWithinLead(date: ISODate, leadDays: number, from: ISODate = today()): boolean {
-  const days = diffDays(date, from);
-  return days >= 0 && days <= leadDays;
 }

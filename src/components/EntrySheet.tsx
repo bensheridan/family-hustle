@@ -2,9 +2,9 @@ import type { Occurrence, Person } from '../types';
 import { useStore } from '../state/store';
 import { Avatar, Chip, Sheet } from '../components/ui';
 import { CATEGORIES } from '../domain/categories';
-import { timeLabel, worksFromHomeOn } from '../domain/occurrences';
+import { entryStartDate, timeLabel, worksFromHomeOn } from '../domain/occurrences';
 import { dayName, fullDate } from '../lib/date';
-import { ageOn } from '../domain/birthdays';
+import { ageOn, yearsSince } from '../domain/birthdays';
 
 /** Detail for one dated thing. Shows ownership and visibility separately,
  *  because an event can belong to Otis and still be the whole family's problem. */
@@ -15,6 +15,9 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
   const repeats = entry.recurrence.kind !== 'none';
   const birthdayOf = entry.derived === 'birthday' ? personById(entry.personIds[0]) : undefined;
   const turning = birthdayOf ? ageOn(birthdayOf, occ.date) : undefined;
+  const years = entry.marksYears
+    ? yearsSince(entryStartDate(entry) ?? occ.date, occ.date)
+    : undefined;
 
   const seenBy =
     entry.visibility === 'everyone'
@@ -45,6 +48,7 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
             <Chip outline>🏠 worked from home</Chip>
           )}
           {turning !== undefined && <Chip outline>turns {turning}</Chip>}
+          {years !== undefined && <Chip outline>{years} years</Chip>}
           {entry.remindDaysBefore ? (
             <Chip outline>heads up {entry.remindDaysBefore} days before</Chip>
           ) : null}

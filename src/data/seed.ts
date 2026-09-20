@@ -176,6 +176,17 @@ export function seedState(): State {
       recurrence: { kind: 'none' },
     }),
     event({
+      title: 'Nadia and Theo’s anniversary',
+      category: 'family',
+      personIds: everyone,
+      visibility: 'everyone',
+      startDate: `${Number(today().slice(0, 4)) - 11}${addDays(today(), 18).slice(4)}`,
+      allDay: true,
+      recurrence: { kind: 'yearly' },
+      remindDaysBefore: 21,
+      marksYears: true,
+    }),
+    event({
       title: 'Car rego due',
       category: 'appointment',
       personIds: [nadia.id, theo.id],

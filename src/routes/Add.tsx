@@ -19,7 +19,7 @@ import type {
   Visibility,
 } from '../types';
 
-type Kind = 'event' | 'shift' | 'task' | 'reminder' | 'appointment' | 'activity' | 'birthday';
+type Kind = 'event' | 'shift' | 'task' | 'reminder' | 'appointment' | 'activity' | 'yearly';
 
 const KINDS: { kind: Kind; label: string; sub: string }[] = [
   { kind: 'event', label: 'event', sub: 'anything on the calendar' },
@@ -28,7 +28,7 @@ const KINDS: { kind: Kind; label: string; sub: string }[] = [
   { kind: 'shift', label: 'shift', sub: 'work and rosters' },
   { kind: 'task', label: 'task', sub: 'something to get done' },
   { kind: 'reminder', label: 'reminder', sub: 'a nudge at a time' },
-  { kind: 'birthday', label: 'birthday', sub: 'and anything else yearly' },
+  { kind: 'yearly', label: 'once a year', sub: 'birthdays, anniversaries, renewals' },
 ];
 
 export function AddPage() {
@@ -84,7 +84,7 @@ export function AddPage() {
   }
 
   if (kind === 'shift') return <ShiftForm onBack={() => setKind(null)} />;
-  if (kind === 'birthday') return <BirthdayForm onBack={() => setKind(null)} />;
+  if (kind === 'yearly') return <YearlyForm onBack={() => setKind(null)} />;
   if (kind === 'task' || kind === 'reminder')
     return <TaskForm kind={kind} onBack={() => setKind(null)} />;
   return <EventForm kind={kind} onBack={() => setKind(null)} />;
@@ -494,7 +494,7 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
   );
 }
 
-/* ---------------- birthdays and other yearly things ---------------- */
+/* ---------------- once a year ---------------- */
 
 const LEAD_CHOICES = [
   { days: 0, label: 'on the day' },
@@ -523,7 +523,7 @@ function RemindField({ value, onChange }: { value: number; onChange: (v: number)
 /** Two things in one form, because they are the same shape: a family member's
  *  birthday (which belongs on their profile, so it is right every year without
  *  anyone maintaining it) and everything else that comes round annually. */
-function BirthdayForm({ onBack }: { onBack: () => void }) {
+function YearlyForm({ onBack }: { onBack: () => void }) {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
 
@@ -532,8 +532,15 @@ function BirthdayForm({ onBack }: { onBack: () => void }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(today());
   const [remind, setRemind] = useState(14);
+  const [marksYears, setMarksYears] = useState<boolean | null>(null);
 
   const person = state.people.find((p) => p.id === personId);
+
+  /* An anniversary is dated from when it happened, a renewal from when it is
+   * next due. So a date in a past year almost always wants its years counted,
+   * and one dated from today does not — but the family can say otherwise. */
+  const yearsByDefault = Number(date.slice(0, 4)) < Number(today().slice(0, 4));
+  const countYears = marksYears ?? yearsByDefault;
 
   const save = () => {
     if (mode === 'person') {
@@ -554,6 +561,7 @@ function BirthdayForm({ onBack }: { onBack: () => void }) {
       allDay: true,
       recurrence: { kind: 'yearly' },
       remindDaysBefore: remind > 0 ? remind : undefined,
+      marksYears: countYears || undefined,
       exceptions: [],
       createdAt: Date.now(),
     };
@@ -566,7 +574,7 @@ function BirthdayForm({ onBack }: { onBack: () => void }) {
 
   return (
     <FormShell
-      title={mode === 'person' ? 'add a birthday' : 'add a yearly thing'}
+      title={mode === 'person' ? 'add a birthday' : 'add a yearly event'}
       onBack={onBack}
       onSave={save}
       canSave={canSave}
@@ -576,8 +584,8 @@ function BirthdayForm({ onBack }: { onBack: () => void }) {
           value={mode}
           onChange={(v) => setMode(v)}
           options={[
-            { value: 'person', label: 'someone’s birthday' },
-            { value: 'other', label: 'something yearly' },
+            { value: 'person', label: 'a birthday' },
+            { value: 'other', label: 'everything else' },
           ]}
         />
       </FieldGroup>
@@ -626,7 +634,10 @@ function BirthdayForm({ onBack }: { onBack: () => void }) {
             />
           </Field>
 
-          <Field label="when?" hint="it repeats on this date every year.">
+          <Field
+            label="when?"
+            hint="for an anniversary, the date it happened. for a renewal, when it is next due."
+          >
             <input
               className="input"
               type="date"
@@ -634,6 +645,17 @@ function BirthdayForm({ onBack }: { onBack: () => void }) {
               onChange={(e) => setDate(e.target.value)}
             />
           </Field>
+
+          <FieldGroup label="count the years?">
+            <div className="choices">
+              <Chip outline active={countYears} onClick={() => setMarksYears(true)}>
+                yes — it’s an anniversary
+              </Chip>
+              <Chip outline active={!countYears} onClick={() => setMarksYears(false)}>
+                no — it just comes round
+              </Chip>
+            </div>
+          </FieldGroup>
 
           <RemindField value={remind} onChange={setRemind} />
         </>

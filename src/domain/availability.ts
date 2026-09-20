@@ -6,9 +6,9 @@
  */
 
 import type { Entry, Id, ISODate, Person } from '../types';
-import { expand, worksFromHomeOn } from './occurrences';
+import { entryStartDate, expand, worksFromHomeOn } from './occurrences';
 import { addDays, diffDays } from '../lib/date';
-import { birthdayLine } from './birthdays';
+import { birthdayLine, yearsSince } from './birthdays';
 
 export type AvailabilityState =
   | 'free'
@@ -191,9 +191,15 @@ export function upcomingReminders(
       }
     }
 
+    const years = occ.entry.marksYears
+      ? yearsSince(entryStartDate(occ.entry) ?? occ.date, occ.date)
+      : undefined;
+
     out.push({
       id: `${occ.key}:lead`,
-      text: `${occ.entry.title} ${whenPhrase(days)}.`,
+      text: years
+        ? `${occ.entry.title} ${whenPhrase(days)} — ${years} years.`
+        : `${occ.entry.title} ${whenPhrase(days)}.`,
       tone: days <= 2 ? 'warn' : 'info',
     });
   }

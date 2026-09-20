@@ -94,6 +94,12 @@ the age they are turning; a renewal can be set to a month. On the morning
 itself it is already too late to buy a present or book the garage, so the
 heads-up card works from a window, not from today.
 
+Yearly things are added under **once a year** — birthdays, anniversaries and
+renewals are one shape with different contents. An anniversary counts its
+years ("11 years") and a renewal does not, which the form infers from the
+date: something dated in a past year is being commemorated, something dated
+from today is being scheduled. The family can override it either way.
+
 **Ownership and visibility are different things.** An event belongs to Otis
 and can still be visible to the whole family. Both are stored on every entry
 and shown separately in the detail sheet.

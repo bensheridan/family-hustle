@@ -13,6 +13,7 @@ const rows = `
 const cases: [string, string][] = [
   ['clean paste', rows],
   [
+    // a made-up name: fixtures must never carry a real person's details
     'whole screenshot, status bar and legend',
     `18:04 97\nTeam Calendar\nTheo Alder\nJun 2026\nMON TUE WED THU FRI SAT SUN\n${rows}\n` +
       `Off Duty  On Duty  Standby Duty\nAttendance  Absence  Public Holiday  Blackout Period`,

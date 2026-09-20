@@ -4,6 +4,7 @@ import { Avatar, Chip, Sheet } from '../components/ui';
 import { CATEGORIES } from '../domain/categories';
 import { timeLabel, worksFromHomeOn } from '../domain/occurrences';
 import { dayName, fullDate } from '../lib/date';
+import { ageOn } from '../domain/birthdays';
 
 /** Detail for one dated thing. Shows ownership and visibility separately,
  *  because an event can belong to Otis and still be the whole family's problem. */
@@ -12,6 +13,8 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
   const entry = occ.entry;
   const owners = entry.personIds.map(personById).filter((p): p is Person => Boolean(p));
   const repeats = entry.recurrence.kind !== 'none';
+  const birthdayOf = entry.derived === 'birthday' ? personById(entry.personIds[0]) : undefined;
+  const turning = birthdayOf ? ageOn(birthdayOf, occ.date) : undefined;
 
   const seenBy =
     entry.visibility === 'everyone'
@@ -41,6 +44,10 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           {entry.type === 'shift' && worksFromHomeOn(entry, occ.date) && (
             <Chip outline>🏠 worked from home</Chip>
           )}
+          {turning !== undefined && <Chip outline>turns {turning}</Chip>}
+          {entry.remindDaysBefore ? (
+            <Chip outline>heads up {entry.remindDaysBefore} days before</Chip>
+          ) : null}
         </div>
 
         <div className="detail__block">
@@ -90,7 +97,14 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           </div>
         )}
 
-        <div className="detail__actions">
+        {birthdayOf && (
+          <p className="muted" style={{ fontSize: 13.5, marginTop: 18 }}>
+            this comes from {birthdayOf.name}’s profile, so it is right every year on its own.
+            change the date there rather than here.
+          </p>
+        )}
+
+        <div className="detail__actions" style={entry.derived ? { display: 'none' } : undefined}>
           {repeats && (
             <button
               type="button"
@@ -139,6 +153,8 @@ function repeatLabel(entry: Occurrence['entry']): string {
       return `every ${r.weekdays.map((w) => DAY_SHORT[w - 1]).join(', ')}`;
     case 'monthlyDay':
       return `monthly on the ${r.day}`;
+    case 'yearly':
+      return 'every year';
     case 'roster':
       return `${r.on} on / ${r.off} off`;
     case 'customRoster':

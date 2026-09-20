@@ -19,6 +19,7 @@ import type {
 } from '../types';
 import { seedState } from '../data/seed';
 import { CARE_PATTERNS, makeSchedule, viewingHousehold } from '../domain/care';
+import { birthdayEntries } from '../domain/birthdays';
 import { today } from '../lib/date';
 
 const KEY = 'family-hustle:v1';
@@ -263,6 +264,9 @@ function migrate(state: State): State {
 interface Store {
   state: State;
   dispatch: (a: Action) => void;
+  /** Everything the calendar should show: what the family entered, plus the
+   *  entries derived from their profiles. Screens use this, not state.entries. */
+  entries: Entry[];
   /** helpers the screens actually reach for */
   personById: (id: Id) => Person | undefined;
   adults: Person[];
@@ -297,6 +301,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return {
       state,
       dispatch,
+      entries: [...state.entries, ...birthdayEntries(people)],
       personById: (id) => people.find((p) => p.id === id),
       adults: people.filter((p) => p.role === 'adult'),
       children: people.filter((p) => p.role === 'child'),

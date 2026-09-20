@@ -24,7 +24,7 @@ import type { Category, ISODate, Occurrence } from '../types';
  * Monday–Sunday grid, real dates, room to read it from across the kitchen.
  */
 export function Fridge() {
-  const { state, personById, householdById, children, careEnabled } = useStore();
+  const { state, entries: allEntries, personById, householdById, children, careEnabled } = useStore();
   const [params] = useSearchParams();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
@@ -52,9 +52,9 @@ export function Fridge() {
   );
 
   const byDate = useMemo(() => {
-    const entries = state.entries.filter((e) => show[e.category]);
+    const entries = allEntries.filter((e) => show[e.category]);
     return groupByDate(expand(entries, grid[0], grid[41], { includeTails: false }));
-  }, [state.entries, show, grid]);
+  }, [allEntries, show, grid]);
 
   /* Care on paper.
    *

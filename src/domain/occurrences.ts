@@ -32,6 +32,14 @@ export function occursOn(entry: Entry, date: ISODate): boolean {
     }
     case 'monthlyDay':
       return Number(date.slice(8, 10)) === r.day;
+    case 'yearly': {
+      const [, startMonth, startDay] = start.split('-');
+      const [, month, day] = date.split('-');
+      if (month === startMonth && day === startDay) return true;
+      // 29 February falls back to the 28th in the years it does not exist
+      const leapDay = startMonth === '02' && startDay === '29';
+      return leapDay && month === '02' && day === '28' && !isLeapYear(Number(date.slice(0, 4)));
+    }
     case 'roster': {
       const cycle = Math.max(1, r.on + r.off);
       return ((delta % cycle) + cycle) % cycle < r.on;
@@ -42,6 +50,10 @@ export function occursOn(entry: Entry, date: ISODate): boolean {
       return r.sequence[i] === 'on';
     }
   }
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
 function startOfWeekISO(iso: ISODate): ISODate {

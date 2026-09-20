@@ -105,6 +105,8 @@ export type Recurrence =
   /** weekdays use 1 = Monday … 7 = Sunday */
   | { kind: 'weekly'; interval: number; weekdays: number[] }
   | { kind: 'monthlyDay'; day: number }
+  /** same date every year — birthdays, renewals, anniversaries */
+  | { kind: 'yearly' }
   /** rotating roster, e.g. 4 on / 4 off, counted from the entry's start date */
   | { kind: 'roster'; on: number; off: number }
   /** a hand-built cycle, e.g. ['on','on','off','off','off'] */
@@ -122,6 +124,13 @@ interface EntryBase {
   location?: string;
   /** The "don't forget the gi 🥋" line. Drives the heads-up card. */
   prepNote?: string;
+  /** Say something this many days ahead. A birthday you hear about on the
+   *  morning is already too late to do anything about. */
+  remindDaysBefore?: number;
+  /** Generated from somewhere else — a person's birthday, say — rather than
+   *  created by hand. Derived entries cannot be edited or deleted on the
+   *  calendar, because the thing that produced them is the real record. */
+  derived?: 'birthday';
   recurrence: Recurrence;
   /** Last day the recurrence runs, inclusive. */
   until?: ISODate;

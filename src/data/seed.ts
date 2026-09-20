@@ -15,6 +15,12 @@ export function seedState(): State {
   const monday = startOfWeek(today());
   const d = (offset: number) => addDays(monday, offset);
 
+  /* One birthday is always about ten days out, whenever the demo is opened,
+   * so the lead-time reminder has something to show. The others are fixed
+   * dates, because that is what birthdays are. */
+  const soon = addDays(today(), 10);
+  const birthdaySoon = `${Number(soon.slice(0, 4)) - 5}${soon.slice(4)}`;
+
   const nadia: Person = {
     id: 'p-nadia', name: 'Nadia', role: 'adult', colour: 'purple', worksShifts: true,
   };
@@ -31,7 +37,7 @@ export function seedState(): State {
   };
   const wren: Person = {
     id: 'p-wren', name: 'Wren', role: 'child', colour: 'pink', worksShifts: false,
-    birthday: '2021-06-09',
+    birthday: birthdaySoon,
   };
 
   const people = [nadia, theo, otis, juno, wren];
@@ -155,15 +161,6 @@ export function seedState(): State {
       endTime: '14:30',
       recurrence: { kind: 'none' },
     }),
-    event({
-      title: "Juno's birthday",
-      category: 'family',
-      personIds: everyone,
-      visibility: 'everyone',
-      startDate: `${new Date().getFullYear()}-11-22`,
-      allDay: true,
-      recurrence: { kind: 'none' },
-    }),
 
     // ---- appointments ----
     event({
@@ -177,6 +174,16 @@ export function seedState(): State {
       startTime: '15:30',
       endTime: '16:15',
       recurrence: { kind: 'none' },
+    }),
+    event({
+      title: 'Car rego due',
+      category: 'appointment',
+      personIds: [nadia.id, theo.id],
+      visibility: 'everyone',
+      startDate: d(30),
+      allDay: true,
+      recurrence: { kind: 'yearly' },
+      remindDaysBefore: 28,
     }),
     event({
       title: 'Car service',

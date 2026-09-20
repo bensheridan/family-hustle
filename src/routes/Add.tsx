@@ -19,7 +19,7 @@ import type {
   Visibility,
 } from '../types';
 
-type Kind = 'event' | 'shift' | 'task' | 'reminder' | 'appointment' | 'activity';
+type Kind = 'event' | 'shift' | 'task' | 'reminder' | 'appointment' | 'activity' | 'birthday';
 
 const KINDS: { kind: Kind; label: string; sub: string }[] = [
   { kind: 'event', label: 'event', sub: 'anything on the calendar' },
@@ -28,6 +28,7 @@ const KINDS: { kind: Kind; label: string; sub: string }[] = [
   { kind: 'shift', label: 'shift', sub: 'work and rosters' },
   { kind: 'task', label: 'task', sub: 'something to get done' },
   { kind: 'reminder', label: 'reminder', sub: 'a nudge at a time' },
+  { kind: 'birthday', label: 'birthday', sub: 'and anything else yearly' },
 ];
 
 export function AddPage() {
@@ -83,6 +84,7 @@ export function AddPage() {
   }
 
   if (kind === 'shift') return <ShiftForm onBack={() => setKind(null)} />;
+  if (kind === 'birthday') return <BirthdayForm onBack={() => setKind(null)} />;
   if (kind === 'task' || kind === 'reminder')
     return <TaskForm kind={kind} onBack={() => setKind(null)} />;
   return <EventForm kind={kind} onBack={() => setKind(null)} />;
@@ -105,7 +107,8 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
   const [start, setStart] = useState('16:30');
   const [end, setEnd] = useState('17:30');
   const [where, setWhere] = useState('');
-  const [repeat, setRepeat] = useState<'none' | 'weekly' | 'daily'>('none');
+  const [repeat, setRepeat] = useState<'none' | 'weekly' | 'daily' | 'yearly'>('none');
+  const [remind, setRemind] = useState(0);
   const [visibleToAll, setVisibleToAll] = useState(true);
   const [prep, setPrep] = useState('');
   const [households, setHouseholds] = useState<HouseholdVisibility>('both');
@@ -120,7 +123,9 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
         ? { kind: 'weekly', interval: 1, weekdays: [weekdayOf(date)] }
         : repeat === 'daily'
           ? { kind: 'daily', interval: 1 }
-          : { kind: 'none' };
+          : repeat === 'yearly'
+            ? { kind: 'yearly' }
+            : { kind: 'none' };
 
     const visibility: Visibility = visibleToAll ? 'everyone' : { only: who };
 
@@ -134,6 +139,7 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
       householdVisibility: households,
       location: where.trim() || undefined,
       prepNote: prep.trim() || undefined,
+      remindDaysBefore: remind > 0 ? remind : undefined,
       startDate: date,
       allDay,
       startTime: allDay ? undefined : start,
@@ -232,8 +238,13 @@ function EventForm({ kind, onBack }: { kind: Kind; onBack: () => void }) {
           <Chip outline active={repeat === 'daily'} onClick={() => setRepeat('daily')}>
             every day
           </Chip>
+          <Chip outline active={repeat === 'yearly'} onClick={() => setRepeat('yearly')}>
+            every year
+          </Chip>
         </div>
       </FieldGroup>
+
+      <RemindField value={remind} onChange={setRemind} />
 
       <FieldGroup
         label="who can see it?"
@@ -479,6 +490,154 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
           ))}
         </div>
       </FieldGroup>
+    </FormShell>
+  );
+}
+
+/* ---------------- birthdays and other yearly things ---------------- */
+
+const LEAD_CHOICES = [
+  { days: 0, label: 'on the day' },
+  { days: 3, label: '3 days before' },
+  { days: 7, label: 'a week before' },
+  { days: 14, label: '2 weeks before' },
+  { days: 28, label: 'a month before' },
+];
+
+/** Lead time is what makes an annual reminder worth having. Finding out on
+ *  the morning is finding out too late. */
+function RemindField({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <FieldGroup label="tell me…" hint="a yearly thing is only useful if you hear about it early.">
+      <div className="choices">
+        {LEAD_CHOICES.map((c) => (
+          <Chip key={c.days} outline active={value === c.days} onClick={() => onChange(c.days)}>
+            {c.label}
+          </Chip>
+        ))}
+      </div>
+    </FieldGroup>
+  );
+}
+
+/** Two things in one form, because they are the same shape: a family member's
+ *  birthday (which belongs on their profile, so it is right every year without
+ *  anyone maintaining it) and everything else that comes round annually. */
+function BirthdayForm({ onBack }: { onBack: () => void }) {
+  const { state, dispatch } = useStore();
+  const navigate = useNavigate();
+
+  const [mode, setMode] = useState<'person' | 'other'>('person');
+  const [personId, setPersonId] = useState<Id>(state.people[0]?.id ?? '');
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(today());
+  const [remind, setRemind] = useState(14);
+
+  const person = state.people.find((p) => p.id === personId);
+
+  const save = () => {
+    if (mode === 'person') {
+      // Stored on the person, not as an event. One record, right every year.
+      dispatch({ type: 'person/update', id: personId, patch: { birthday: date } });
+      navigate('/kids');
+      return;
+    }
+
+    const entry: EventEntry = {
+      id: newId(),
+      type: 'event',
+      title: title.trim(),
+      category: 'family',
+      personIds: state.people.map((p) => p.id),
+      visibility: 'everyone',
+      startDate: date,
+      allDay: true,
+      recurrence: { kind: 'yearly' },
+      remindDaysBefore: remind > 0 ? remind : undefined,
+      exceptions: [],
+      createdAt: Date.now(),
+    };
+    dispatch({ type: 'entry/add', entry });
+    dispatch({ type: 'template/set', template: { label: entry.title, entry: stripIds(entry) } });
+    navigate('/');
+  };
+
+  const canSave = mode === 'person' ? Boolean(personId) : Boolean(title.trim());
+
+  return (
+    <FormShell
+      title={mode === 'person' ? 'add a birthday' : 'add a yearly thing'}
+      onBack={onBack}
+      onSave={save}
+      canSave={canSave}
+    >
+      <FieldGroup label="what kind?">
+        <Segmented
+          value={mode}
+          onChange={(v) => setMode(v)}
+          options={[
+            { value: 'person', label: 'someone’s birthday' },
+            { value: 'other', label: 'something yearly' },
+          ]}
+        />
+      </FieldGroup>
+
+      {mode === 'person' ? (
+        <>
+          <FieldGroup
+            label="whose?"
+            hint="it saves to their profile, so it comes round every year on its own."
+          >
+            <div className="choices">
+              {state.people.map((p) => (
+                <Chip key={p.id} outline active={personId === p.id} onClick={() => setPersonId(p.id)}>
+                  <span className="dot" style={{ background: colourVar(p.colour) }} />
+                  {p.name}
+                </Chip>
+              ))}
+            </div>
+          </FieldGroup>
+
+          <Field
+            label="date of birth"
+            hint={
+              person?.birthday
+                ? `${person.name} currently has ${person.birthday} saved.`
+                : 'the year matters — it is how the app knows what age they are turning.'
+            }
+          >
+            <input
+              className="input"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </Field>
+        </>
+      ) : (
+        <>
+          <Field label="what?">
+            <input
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Car rego due"
+              autoFocus
+            />
+          </Field>
+
+          <Field label="when?" hint="it repeats on this date every year.">
+            <input
+              className="input"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </Field>
+
+          <RemindField value={remind} onChange={setRemind} />
+        </>
+      )}
     </FormShell>
   );
 }

@@ -82,6 +82,18 @@ a weekly recurrence with the worked weekdays, which means "Monday to Friday,
 picker cycles each day through not working → at work → from home, so both
 questions are answered by one control.
 
+**Birthdays are derived, not entered.** A family member's birthday lives on
+their profile, and the calendar generates a yearly entry from it — the same
+trick as handovers. It cannot be forgotten, duplicated, or deleted by accident,
+and it is right every year without anyone touching it. The detail sheet for one
+has no delete button, because the profile is the real record.
+
+**A reminder you get on the day is a reminder that failed.** Anything annual
+carries a lead time: a birthday starts being mentioned a fortnight out, with
+the age they are turning; a renewal can be set to a month. On the morning
+itself it is already too late to buy a present or book the garage, so the
+heads-up card works from a window, not from today.
+
 **Ownership and visibility are different things.** An event belongs to Otis
 and can still be visible to the whole family. Both are stored on every entry
 and shown separately in the detail sheet.
@@ -123,10 +135,11 @@ family, work, task, shared care) are properties of an entry, not separate
 types — which is why the add flow can offer six choices while the model stays
 small.
 
-Recurrence covers one-offs, daily, weekly, monthly-by-date, and rosters
+Recurrence covers one-offs, daily, weekly, monthly-by-date, yearly, and rosters
 (`4 on / 4 off`, `7 on / 7 off`, or any custom on/off cycle) counted from the
 entry's start date. A single occurrence can be skipped without breaking the
-series.
+series. Yearly handles 29 February by falling back to the 28th in the years it
+does not exist.
 
 ## Shared care
 

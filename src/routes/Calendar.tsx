@@ -33,7 +33,7 @@ import type { Category, Id, ISODate, Occurrence } from '../types';
 type View = 'month' | 'week' | 'day';
 
 export function CalendarPage() {
-  const { state, personById, careEnabled } = useStore();
+  const { state, entries: allEntries, personById, careEnabled } = useStore();
   const [view, setView] = useState<View>('month');
   const [cursor, setCursor] = useState<ISODate>(today());
   const [person, setPerson] = useState<Id | 'everyone'>('everyone');
@@ -65,7 +65,7 @@ export function CalendarPage() {
   }, [view, cursor, state.settings.weekStartsMonday]);
 
   const occurrences = useMemo(() => {
-    const visible = filterForHousehold(state.entries, state.settings);
+    const visible = filterForHousehold(allEntries, state.settings);
     const filtered = visible.filter((e) => {
       if (hidden.includes(e.category)) return false;
       if (!sharedCare && e.category === 'sharedCare') return false;
@@ -73,7 +73,7 @@ export function CalendarPage() {
       return true;
     });
     return expand(filtered, range.from, range.to);
-  }, [state.entries, state.settings, hidden, person, sharedCare, range.from, range.to]);
+  }, [allEntries, state.settings, hidden, person, sharedCare, range.from, range.to]);
 
   const byDate = useMemo(() => groupByDate(occurrences), [occurrences]);
 

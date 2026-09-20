@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { expand } from '../domain/occurrences';
 import { addDays, dayName, relativeDay, shortDate, today } from '../lib/date';
+import { ageOn, daysUntilBirthday, nextBirthday } from '../domain/birthdays';
 import { Avatar, Empty, SectionHead } from '../components/ui';
 import { OccurrenceRow } from '../components/OccurrenceRow';
 import { EntrySheet } from '../components/EntrySheet';
@@ -21,7 +22,7 @@ import type { Category, Occurrence } from '../types';
  *  events already assigned to them. */
 export function KidProfile() {
   const { id } = useParams();
-  const { state, personById, householdById, households, careEnabled } = useStore();
+  const { state, entries: allEntries, personById, householdById, households, careEnabled } = useStore();
   const [open, setOpen] = useState<Occurrence | null>(null);
   const child = id ? personById(id) : undefined;
   const day = today();
@@ -39,7 +40,7 @@ export function KidProfile() {
     );
   }
 
-  const theirs = filterForHousehold(state.entries, state.settings).filter((e) =>
+  const theirs = filterForHousehold(allEntries, state.settings).filter((e) =>
     e.personIds.includes(child.id),
   );
   const schedule = careEnabled ? scheduleFor(state.careSchedules, child.id) : undefined;
@@ -60,7 +61,18 @@ export function KidProfile() {
         <div>
           <div className="topbar__title">{child.name}</div>
           <div className="topbar__sub">
-            {child.birthday ? `birthday ${shortDate(child.birthday)}` : 'no birthday saved yet'}
+            {(() => {
+              if (!child.birthday) return 'no birthday saved yet';
+              const next = nextBirthday(child, day);
+              const days = daysUntilBirthday(child, day);
+              const age = next ? ageOn(child, next) : undefined;
+              const turning = age ? `turns ${age}` : 'birthday';
+              if (days === 0) return `${turning} today 🎂`;
+              if (days !== undefined && days <= 30) {
+                return `${turning} in ${days} days · ${shortDate(next!)}`;
+              }
+              return `${turning} on ${shortDate(next!)}`;
+            })()}
           </div>
         </div>
         <Link className="btn btn--sm btn--quiet" to="/kids">

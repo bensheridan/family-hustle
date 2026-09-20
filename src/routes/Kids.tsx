@@ -6,7 +6,7 @@ import { Avatar, Empty } from '../components/ui';
 import { timeLabel } from '../domain/occurrences';
 
 export function Kids() {
-  const { state, children } = useStore();
+  const { entries: allEntries, children } = useStore();
   const day = today();
 
   return (
@@ -28,7 +28,7 @@ export function Kids() {
         <div className="section">
           {children.map((child) => {
             const next = expand(
-              state.entries.filter((e) => e.personIds.includes(child.id)),
+              allEntries.filter((e) => e.personIds.includes(child.id)),
               day,
               addDays(day, 14),
             ).filter((o) => !o.isTail && !o.done);

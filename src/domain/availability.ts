@@ -5,9 +5,10 @@
  * actually be counted on that day.
  */
 
-import type { Entry, Id, ISODate } from '../types';
+import type { Entry, Id, ISODate, Person } from '../types';
 import { expand, worksFromHomeOn } from './occurrences';
-import { addDays } from '../lib/date';
+import { addDays, diffDays } from '../lib/date';
+import { birthdayLine } from './birthdays';
 
 export type AvailabilityState =
   | 'free'
@@ -150,6 +151,61 @@ export function headsUpFor(
   }
 
   return dedupe(out);
+}
+
+/** Things worth saying before the day arrives.
+ *
+ * Anything carrying a lead time gets mentioned once it comes inside it —
+ * a birthday two weeks out, a renewal three weeks out. This is the whole
+ * point of an annual reminder: on the day itself it is already too late to
+ * buy a present or book the garage. */
+export function upcomingReminders(
+  entries: Entry[],
+  people: Person[],
+  from: ISODate,
+): HeadsUp[] {
+  const withLead = entries.filter((e) => (e.remindDaysBefore ?? 0) > 0);
+  if (withLead.length === 0) return [];
+
+  const maxLead = Math.max(...withLead.map((e) => e.remindDaysBefore ?? 0));
+  const occs = expand(withLead, from, addDays(from, maxLead), { includeTails: false });
+
+  const out: HeadsUp[] = [];
+  for (const occ of occs) {
+    if (occ.isTail) continue;
+    const lead = occ.entry.remindDaysBefore ?? 0;
+    const days = diffDays(occ.date, from);
+    if (days < 0 || days > lead) continue;
+
+    // A birthday can say how old they are turning, which is the bit people
+    // actually want to know.
+    if (occ.entry.derived === 'birthday') {
+      const person = people.find((p) => p.id === occ.entry.personIds[0]);
+      if (person) {
+        out.push({
+          id: `${occ.key}:birthday`,
+          text: birthdayLine(person, occ.date, from),
+          tone: days <= 1 ? 'warn' : 'info',
+        });
+        continue;
+      }
+    }
+
+    out.push({
+      id: `${occ.key}:lead`,
+      text: `${occ.entry.title} ${whenPhrase(days)}.`,
+      tone: days <= 2 ? 'warn' : 'info',
+    });
+  }
+  return out;
+}
+
+function whenPhrase(days: number): string {
+  if (days === 0) return 'is today';
+  if (days === 1) return 'is tomorrow';
+  if (days < 14) return `is in ${days} days`;
+  if (days < 21) return 'is in a fortnight';
+  return `is in ${Math.round(days / 7)} weeks`;
 }
 
 function dedupe(items: HeadsUp[]): HeadsUp[] {

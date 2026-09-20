@@ -3,7 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../state/store';
 import { addDays, fullDate, relativeDay, today } from '../lib/date';
 import { expand, groupByDate } from '../domain/occurrences';
-import { availabilityColour, availabilityFor, headsUpFor } from '../domain/availability';
+import {
+  availabilityColour,
+  availabilityFor,
+  headsUpFor,
+  upcomingReminders,
+} from '../domain/availability';
 import { OccurrenceRow } from '../components/OccurrenceRow';
 import { Avatar, Empty, SectionHead } from '../components/ui';
 import { EntrySheet } from '../components/EntrySheet';
@@ -13,7 +18,7 @@ import type { Occurrence } from '../types';
 
 /** The family command centre: what is happening today, what is coming up. */
 export function Home() {
-  const { state, workers, personById, careEnabled } = useStore();
+  const { state, entries: allEntries, workers, personById, careEnabled } = useStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState<Occurrence | null>(null);
 
@@ -23,8 +28,8 @@ export function Home() {
   // When previewing another household, the home screen has to be their home
   // screen — otherwise the preview proves nothing.
   const entries = useMemo(
-    () => filterForHousehold(state.entries, state.settings),
-    [state.entries, state.settings],
+    () => filterForHousehold(allEntries, state.settings),
+    [allEntries, state.settings],
   );
 
   const todays = useMemo(
@@ -42,6 +47,8 @@ export function Home() {
         ...h,
         text: `tomorrow — ${h.text}`,
       })),
+      // anything carrying a lead time — birthdays, renewals, annual things
+      ...upcomingReminders(entries, state.people, day),
     ],
     [entries, state.people, day],
   );
@@ -121,7 +128,7 @@ export function Home() {
         <section className="section">
           <SectionHead title="heads up" />
           <div className="card card--pad headsup">
-            {headsUp.slice(0, 4).map((h) => (
+            {headsUp.slice(0, 5).map((h) => (
               <p key={h.id} className="headsup__line" data-tone={h.tone}>
                 {h.text}
               </p>

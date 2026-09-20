@@ -1022,3 +1022,95 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------- the working week ----------
+   One control answers both "which days" and "which of those from home". */
+
+.weekpick {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.weekpick__day {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-weight: 700;
+  font-size: 13px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease,
+    transform 0.08s ease;
+}
+
+.weekpick__day:active {
+  transform: scale(0.92);
+}
+
+.weekpick__day[data-mode='onsite'] {
+  background: var(--p-orange);
+  border-color: var(--p-orange);
+  color: #fff;
+}
+
+.weekpick__day[data-mode='home'] {
+  background: var(--p-teal);
+  border-color: var(--p-teal);
+  color: #fff;
+}
+
+.weekpick__home {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.weekpick__key {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.weekpick__key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.weekpick__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.weekpick__swatch[data-mode='onsite'] {
+  background: var(--p-orange);
+}
+
+.weekpick__swatch[data-mode='home'] {
+  background: var(--p-teal);
+}
+
+.wfh-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--p-teal);
+  background: color-mix(in srgb, var(--p-teal) 14%, transparent);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
+  flex: none;
+}

@@ -166,6 +166,12 @@ export interface ShiftEntry extends EntryBase {
   /** If endTime <= startTime the shift crosses midnight. It stays one shift. */
   endTime: Time;
   impacts: ShiftImpact[];
+  /** Worked from home on these weekdays (1 = Monday). Lets one weekly entry
+   *  cover "Monday to Friday, from home on Monday and Thursday". */
+  wfhWeekdays?: number[];
+  /** Worked from home every time — for rosters and one-offs, where weekdays
+   *  are not the unit. */
+  wfh?: boolean;
 }
 
 export interface TaskEntry extends EntryBase {

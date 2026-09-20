@@ -6,10 +6,15 @@
  */
 
 import type { Entry, Id, ISODate } from '../types';
-import { expand } from './occurrences';
+import { expand, worksFromHomeOn } from './occurrences';
 import { addDays } from '../lib/date';
 
-export type AvailabilityState = 'free' | 'working' | 'recovering' | 'limited';
+export type AvailabilityState =
+  | 'free'
+  | 'working'
+  | 'workingHome'
+  | 'recovering'
+  | 'limited';
 
 export interface Availability {
   state: AvailabilityState;
@@ -21,6 +26,7 @@ export interface Availability {
 const LABELS: Record<AvailabilityState, string> = {
   free: 'around',
   working: 'at work',
+  workingHome: 'working from home',
   recovering: 'sleeping off nights',
   limited: 'around, but stretched',
 };
@@ -47,6 +53,17 @@ export function availabilityFor(
       : impacts.includes('availableAfter')
         ? 'free after the shift'
         : undefined;
+
+    // At home but working is not the same as at work, and not the same as
+    // free either. It is its own answer.
+    if (shift.entry.type === 'shift' && worksFromHomeOn(shift.entry, date)) {
+      return {
+        state: 'workingHome',
+        label: LABELS.workingHome,
+        detail: detail ?? 'in the house, but working',
+      };
+    }
+
     return { state: 'working', label: LABELS.working, detail };
   }
 
@@ -148,6 +165,8 @@ export function availabilityColour(state: AvailabilityState): string {
   switch (state) {
     case 'working':
       return 'var(--p-orange)';
+    case 'workingHome':
+      return 'var(--p-teal)';
     case 'recovering':
       return 'var(--alert)';
     case 'limited':

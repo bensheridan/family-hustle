@@ -58,6 +58,19 @@ export function crossesMidnight(shift: ShiftEntry): boolean {
   return shift.endTime <= shift.startTime;
 }
 
+/** Is this particular day worked from home?
+ *
+ * Working from home is its own thing, not a kind of time off. The person is
+ * unavailable in the way work makes you unavailable, but they are in the
+ * house — so they can let the dog out, take a delivery, and be there when
+ * school rings. The rest of the app needs to be able to tell the difference. */
+export function worksFromHomeOn(shift: ShiftEntry, date: ISODate): boolean {
+  if (shift.wfhWeekdays && shift.wfhWeekdays.length > 0) {
+    return shift.wfhWeekdays.includes(weekday(date));
+  }
+  return shift.wfh === true;
+}
+
 function buildOccurrence(entry: Entry, date: ISODate): Occurrence {
   if (entry.type === 'shift') {
     const over = crossesMidnight(entry);

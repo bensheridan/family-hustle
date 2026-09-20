@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../state/store';
-import { expand, timeLabel } from '../domain/occurrences';
+import { expand, timeLabel, worksFromHomeOn } from '../domain/occurrences';
 import { availabilityColour, availabilityFor } from '../domain/availability';
 import { addDays, dayName, startOfWeek, today } from '../lib/date';
 import { Avatar, Chip, Empty, SectionHead } from '../components/ui';
@@ -80,9 +80,15 @@ export function Work() {
       <div className="card card--pad worksummary" style={{ marginTop: 14 }}>
         <Avatar person={person} size="lg" />
         <div>
-          <div className="worksummary__hours">{Math.round(hours)} hours rostered</div>
+          <div className="worksummary__hours">{Math.round(hours)} hours</div>
           <div className="muted" style={{ fontSize: 13.5 }}>
-            {shifts.filter((o) => !o.isTail).length} shifts this week
+            {shifts.filter((o) => !o.isTail).length} days
+            {(() => {
+              const home = shifts.filter(
+                (o) => !o.isTail && o.entry.type === 'shift' && worksFromHomeOn(o.entry, o.date),
+              ).length;
+              return home > 0 ? `, ${home} from home` : '';
+            })()}
           </div>
         </div>
       </div>
@@ -103,7 +109,14 @@ export function Work() {
                   {onDay.length > 0 ? (
                     onDay.map((o) => (
                       <div key={o.key}>
-                        <div className="row__title">{timeLabel(o)}</div>
+                        <div className="row__title">
+                          {timeLabel(o)}
+                          {o.entry.type === 'shift' && worksFromHomeOn(o.entry, d) && (
+                            <span className="wfh-tag" style={{ marginLeft: 8 }}>
+                              🏠 home
+                            </span>
+                          )}
+                        </div>
                         <div className="row__meta">
                           {o.entry.title}
                           {o.crossesMidnight && ` · finishes ${dayName(addDays(d, 1))}`}

@@ -239,10 +239,10 @@ function Work({ onNext }: { onNext: () => void }) {
     <div className="onb__pane">
       <StepHead
         n={3}
-        title="does anyone work shifts?"
-        sub="rosters, nights, weekends. skip this if work is nine to five."
+        title="whose work should be on the calendar?"
+        sub="a standard week, a rotating roster, nights — whatever shape it is."
       />
-      <FieldGroup label="tap anyone with a roster">
+      <FieldGroup label="tap anyone whose work the family needs to see">
         <div className="choices">
           {list.map((p) => (
             <Chip

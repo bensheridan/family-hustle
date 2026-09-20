@@ -16,7 +16,7 @@ export function seedState(): State {
   const d = (offset: number) => addDays(monday, offset);
 
   const nadia: Person = {
-    id: 'p-nadia', name: 'Nadia', role: 'adult', colour: 'purple', worksShifts: false,
+    id: 'p-nadia', name: 'Nadia', role: 'adult', colour: 'purple', worksShifts: true,
   };
   const theo: Person = {
     id: 'p-theo', name: 'Theo', role: 'adult', colour: 'blue', worksShifts: true,
@@ -189,7 +189,26 @@ export function seedState(): State {
       recurrence: { kind: 'none' },
     }),
 
-    // ---- work: one shift worker, a 4 on / 4 off roster of nights ----
+    /* ---- work ----
+     * Two shapes on purpose: a standard week with days at home, and a
+     * rotating roster of nights. Between them the family can always answer
+     * "who is in the house today?" — which is the question that matters when
+     * the dog needs letting out or someone has to take a delivery. */
+    shift({
+      title: 'Work',
+      personIds: [nadia.id],
+      visibility: 'everyone',
+      location: 'Brightwater Studio',
+      startDate: d(0),
+      shiftType: 'day',
+      startTime: '07:00',
+      endTime: '15:00',
+      impacts: ['availableAfter'],
+      wfhWeekdays: [1, 4],
+      recurrence: { kind: 'weekly', interval: 1, weekdays: [1, 2, 3, 4, 5] },
+    }),
+
+    // a rotating roster of nights
     shift({
       title: 'Night shift',
       personIds: [theo.id],

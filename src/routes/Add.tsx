@@ -4,7 +4,7 @@ import { newId, useStore } from '../state/store';
 import { Chip, Field, FieldGroup, Segmented } from '../components/ui';
 import { IMPACTS, SHIFT_TYPES, colourVar } from '../domain/categories';
 import { crossesMidnight } from '../domain/occurrences';
-import { dayName, formatTime, today, addDays } from '../lib/date';
+import { dayName, formatTime, today } from '../lib/date';
 import type {
   Category,
   HouseholdVisibility,
@@ -271,14 +271,24 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
   const candidates = adults.length > 0 ? adults : state.people.filter((p) => p.role !== 'pet');
 
   const [personId, setPersonId] = useState<Id>(candidates[0]?.id ?? '');
-  const [shiftType, setShiftType] = useState<ShiftType>('night');
+  const [shiftType, setShiftType] = useState<ShiftType>('day');
   const [date, setDate] = useState(today());
-  const [start, setStart] = useState('18:00');
-  const [end, setEnd] = useState('06:00');
-  const [pattern, setPattern] = useState<'none' | '4-4' | '7-7' | 'custom'>('none');
+  const [start, setStart] = useState('09:00');
+  const [end, setEnd] = useState('17:00');
+  // 'week' is first and default: most people work a standard week, and it was
+  // previously the one thing this form could not express.
+  const [pattern, setPattern] = useState<'week' | 'none' | '4-4' | '7-7' | 'custom'>('week');
   const [customOn, setCustomOn] = useState(3);
   const [customOff, setCustomOff] = useState(2);
   const [impacts, setImpacts] = useState<ShiftImpact[]>([]);
+  /** weekday → not working | at work | from home */
+  const [week, setWeek] = useState<Record<number, DayMode>>({
+    1: 'onsite', 2: 'onsite', 3: 'onsite', 4: 'onsite', 5: 'onsite', 6: 'off', 7: 'off',
+  });
+  const [wfhAll, setWfhAll] = useState(false);
+
+  const workingDays = WEEKDAYS.filter((d) => week[d.value] !== 'off').map((d) => d.value);
+  const wfhDays = WEEKDAYS.filter((d) => week[d.value] === 'home').map((d) => d.value);
 
   const overnight = crossesMidnight({ startTime: start, endTime: end } as ShiftEntry);
 
@@ -293,20 +303,26 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
 
   const save = () => {
     const recurrence: Recurrence =
-      pattern === '4-4'
-        ? { kind: 'roster', on: 4, off: 4 }
-        : pattern === '7-7'
-          ? { kind: 'roster', on: 7, off: 7 }
-          : pattern === 'custom'
-            ? { kind: 'roster', on: customOn, off: customOff }
-            : { kind: 'none' };
+      pattern === 'week'
+        ? { kind: 'weekly', interval: 1, weekdays: workingDays }
+        : pattern === '4-4'
+          ? { kind: 'roster', on: 4, off: 4 }
+          : pattern === '7-7'
+            ? { kind: 'roster', on: 7, off: 7 }
+            : pattern === 'custom'
+              ? { kind: 'roster', on: customOn, off: customOff }
+              : { kind: 'none' };
 
     const person = state.people.find((p) => p.id === personId);
 
     const entry: ShiftEntry = {
       id: newId(),
       type: 'shift',
-      title: `${SHIFT_TYPES.find((s) => s.value === shiftType)?.label ?? 'shift'} shift`,
+      // "day shift" is roster language. A standard week is just work.
+      title:
+        pattern === 'week' && (shiftType === 'day' || shiftType === 'custom')
+          ? 'Work'
+          : `${SHIFT_TYPES.find((s) => s.value === shiftType)?.label ?? 'shift'} shift`,
       category: 'work',
       personIds: [personId],
       visibility: 'everyone',
@@ -315,6 +331,8 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
       startTime: start,
       endTime: end,
       impacts,
+      wfhWeekdays: pattern === 'week' && wfhDays.length > 0 ? wfhDays : undefined,
+      wfh: pattern !== 'week' && wfhAll ? true : undefined,
       recurrence,
       exceptions: [],
       createdAt: Date.now(),
@@ -355,7 +373,10 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
         </div>
       </FieldGroup>
 
-      <Field label="when?">
+      <Field
+        label={pattern === 'week' ? 'starting from' : 'when?'}
+        hint={pattern === 'week' ? 'the week runs from here on.' : undefined}
+      >
         <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </Field>
 
@@ -369,22 +390,30 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
           {overnight ? (
             <>
               <strong>
-                {dayName(date)} {formatTime(start)} → {dayName(addDays(date, 1))} {formatTime(end)}
+                {pattern === 'week' ? describeDays(workingDays) : dayName(date)} {formatTime(start)}{' '}
+                → {formatTime(end)} the next morning
               </strong>
               <span>one shift, crossing midnight.</span>
             </>
           ) : (
             <strong>
-              {dayName(date)} {formatTime(start)}–{formatTime(end)}
+              {pattern === 'week' ? describeDays(workingDays) : dayName(date)}{' '}
+              {formatTime(start)}–{formatTime(end)}
             </strong>
+          )}
+          {pattern === 'week' && wfhDays.length > 0 && (
+            <span>from home on {describeDays(wfhDays)}.</span>
           )}
         </div>
       </FieldGroup>
 
       <FieldGroup label="does this follow a pattern?">
         <div className="choices">
+          <Chip outline active={pattern === 'week'} onClick={() => setPattern('week')}>
+            the same days each week
+          </Chip>
           <Chip outline active={pattern === 'none'} onClick={() => setPattern('none')}>
-            no pattern
+            just this once
           </Chip>
           <Chip outline active={pattern === '4-4'} onClick={() => setPattern('4-4')}>
             4 on / 4 off
@@ -396,6 +425,16 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
             custom pattern
           </Chip>
         </div>
+        {pattern === 'week' && (
+          <WeekPicker week={week} onChange={setWeek} />
+        )}
+        {pattern !== 'week' && (
+          <div className="choices" style={{ marginTop: 10 }}>
+            <Chip outline active={wfhAll} onClick={() => setWfhAll(!wfhAll)}>
+              🏠 worked from home
+            </Chip>
+          </div>
+        )}
         {pattern === 'custom' && (
           <div className="input-pair" style={{ marginTop: 10 }}>
             <input
@@ -442,6 +481,82 @@ function ShiftForm({ onBack }: { onBack: () => void }) {
       </FieldGroup>
     </FormShell>
   );
+}
+
+/* ---------------- the working week ---------------- */
+
+type DayMode = 'off' | 'onsite' | 'home';
+
+const WEEKDAYS = [
+  { value: 1, short: 'M', name: 'Monday' },
+  { value: 2, short: 'T', name: 'Tuesday' },
+  { value: 3, short: 'W', name: 'Wednesday' },
+  { value: 4, short: 'T', name: 'Thursday' },
+  { value: 5, short: 'F', name: 'Friday' },
+  { value: 6, short: 'S', name: 'Saturday' },
+  { value: 7, short: 'S', name: 'Sunday' },
+];
+
+const NEXT_MODE: Record<DayMode, DayMode> = {
+  off: 'onsite',
+  onsite: 'home',
+  home: 'off',
+};
+
+/** One control for both questions: which days are worked, and which of those
+ *  are worked from home. Tapping a day cycles off → at work → from home. */
+function WeekPicker({
+  week,
+  onChange,
+}: {
+  week: Record<number, DayMode>;
+  onChange: (w: Record<number, DayMode>) => void;
+}) {
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="weekpick">
+        {WEEKDAYS.map((d) => (
+          <button
+            key={d.value}
+            type="button"
+            className="weekpick__day"
+            data-mode={week[d.value]}
+            aria-label={`${d.name} — ${MODE_LABEL[week[d.value]]}`}
+            onClick={() => onChange({ ...week, [d.value]: NEXT_MODE[week[d.value]] })}
+          >
+            <span className="weekpick__letter">{d.short}</span>
+            {week[d.value] === 'home' && <span className="weekpick__home">🏠</span>}
+          </button>
+        ))}
+      </div>
+      <div className="weekpick__key">
+        <span>
+          <i className="weekpick__swatch" data-mode="onsite" /> at work
+        </span>
+        <span>
+          <i className="weekpick__swatch" data-mode="home" /> from home
+        </span>
+        <span className="muted">tap a day to change it</span>
+      </div>
+    </div>
+  );
+}
+
+const MODE_LABEL: Record<DayMode, string> = {
+  off: 'not working',
+  onsite: 'at work',
+  home: 'from home',
+};
+
+/** 'Monday to Friday', 'Monday and Thursday', 'Monday, Wednesday and Friday' */
+export function describeDays(days: number[]): string {
+  if (days.length === 0) return 'no days';
+  if (days.length === 7) return 'every day';
+  const names = days.map((d) => WEEKDAYS[d - 1].name);
+  const consecutive = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+  if (consecutive && days.length > 2) return `${names[0]} to ${names[names.length - 1]}`;
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 /* ---------------- task ---------------- */

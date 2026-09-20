@@ -2,7 +2,7 @@ import type { Occurrence, Person } from '../types';
 import { useStore } from '../state/store';
 import { Avatar, Chip, Sheet } from '../components/ui';
 import { CATEGORIES } from '../domain/categories';
-import { timeLabel } from '../domain/occurrences';
+import { timeLabel, worksFromHomeOn } from '../domain/occurrences';
 import { dayName, fullDate } from '../lib/date';
 
 /** Detail for one dated thing. Shows ownership and visibility separately,
@@ -38,6 +38,9 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           </Chip>
           {repeats && <Chip outline>{repeatLabel(entry)}</Chip>}
           {occ.crossesMidnight && <Chip outline>one shift, crosses midnight</Chip>}
+          {entry.type === 'shift' && worksFromHomeOn(entry, occ.date) && (
+            <Chip outline>🏠 worked from home</Chip>
+          )}
         </div>
 
         <div className="detail__block">

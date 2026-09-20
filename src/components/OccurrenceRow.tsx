@@ -1,6 +1,6 @@
 import type { Occurrence, Person } from '../types';
 import { CATEGORIES, colourVar } from '../domain/categories';
-import { timeLabel } from '../domain/occurrences';
+import { timeLabel, worksFromHomeOn } from '../domain/occurrences';
 import { dayName } from '../lib/date';
 import { AvatarStack } from './ui';
 import { useStore } from '../state/store';
@@ -26,6 +26,7 @@ export function OccurrenceRow({
 
   const rail = people[0] ? colourVar(people[0].colour) : CATEGORIES[occ.entry.category].colour;
   const isTask = occ.entry.type === 'task';
+  const fromHome = occ.entry.type === 'shift' && worksFromHomeOn(occ.entry, occ.date);
   const muted = occ.isTail || occ.done;
 
   // The list shows when a thing starts; how long it runs goes in the meta line,
@@ -84,6 +85,11 @@ export function OccurrenceRow({
         <div className="row__meta">{meta.join(' · ')}</div>
       </button>
 
+      {fromHome && (
+        <span className="wfh-tag" title="worked from home">
+          🏠 home
+        </span>
+      )}
       {people.length > 1 && <AvatarStack people={people} max={3} />}
     </div>
   );

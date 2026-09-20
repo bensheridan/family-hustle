@@ -67,12 +67,20 @@ produces a single occurrence anchored to Tuesday, plus a muted tail on
 Wednesday morning that points back at the same entry and says whose shift it
 is. It is never two unrelated events. See `domain/occurrences.ts`.
 
-**Off work is not the same as available.** A shift carries optional impacts —
-kids need pickup, can't attend family events, sleeping after nights, available
-before/after. `domain/availability.ts` turns those into a read on whether a
-person can actually be counted on, which the home screen and work section both
-use. Someone who came off nights this morning shows as *sleeping off nights*,
-not *free*.
+**Off work is not the same as available — and neither is working from home.**
+A shift carries optional impacts: kids need pickup, can't attend family events,
+sleeping after nights, available before/after. `domain/availability.ts` turns
+those into a read on whether a person can actually be counted on. Someone who
+came off nights this morning shows as *sleeping off nights*, not *free*.
+Working from home is its own state again: unavailable the way work makes you
+unavailable, but *in the house* — so they can let the dog out, take a delivery,
+and be there when school rings.
+
+**A standard week is the common case, so it is the default.** Work is stored as
+a weekly recurrence with the worked weekdays, which means "Monday to Friday,
+7am–3pm, from home on Monday and Thursday" is one entry, not five. The weekday
+picker cycles each day through not working → at work → from home, so both
+questions are answered by one control.
 
 **Ownership and visibility are different things.** An event belongs to Otis
 and can still be visible to the whole family. Both are stored on every entry

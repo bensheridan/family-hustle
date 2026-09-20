@@ -111,6 +111,8 @@ export interface CareSchedule {
 }
 
 export type Category =
+  | 'moneyIn'
+  | 'moneyOut'
   | 'school'
   | 'activity'
   | 'appointment'

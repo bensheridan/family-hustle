@@ -140,6 +140,22 @@ export function formatTimeFromDate(d: Date): string {
   return formatTime(`${`${d.getHours()}`.padStart(2, '0')}:${`${d.getMinutes()}`.padStart(2, '0')}`);
 }
 
+/** 1st, 2nd, 3rd, 4th … 21st, 31st. */
+export function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
 /** 'today', 'tomorrow', otherwise 'Monday 22 September'. */
 export function relativeDay(iso: ISODate, ref: ISODate = today()): string {
   const d = diffDays(iso, ref);

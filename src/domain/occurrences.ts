@@ -30,8 +30,19 @@ export function occursOn(entry: Entry, date: ISODate): boolean {
       const weeksApart = Math.floor(diffDays(date, startOfWeekISO(start)) / 7);
       return weeksApart % Math.max(1, r.interval) === 0;
     }
-    case 'monthlyDay':
-      return Number(date.slice(8, 10)) === r.day;
+    case 'monthlyDay': {
+      const day = Number(date.slice(8, 10));
+      if (day === r.day) return true;
+      /* Rent due on the 31st still has to come out in February. A monthly
+       * date past the end of a short month lands on its last day, which is
+       * what a bank does with it. */
+      const lastOfMonth = new Date(
+        Number(date.slice(0, 4)),
+        Number(date.slice(5, 7)),
+        0,
+      ).getDate();
+      return r.day > lastOfMonth && day === lastOfMonth;
+    }
     case 'yearly': {
       const [, startMonth, startDay] = start.split('-');
       const [, month, day] = date.split('-');

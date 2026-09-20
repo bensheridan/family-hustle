@@ -4,7 +4,7 @@ import { newId, useStore } from '../state/store';
 import { Chip, Field, FieldGroup, Segmented } from '../components/ui';
 import { IMPACTS, SHIFT_TYPES, colourVar } from '../domain/categories';
 import { crossesMidnight } from '../domain/occurrences';
-import { dayName, formatTime, today } from '../lib/date';
+import { dayName, formatTime, ordinal, today } from '../lib/date';
 import type {
   Category,
   HouseholdVisibility,
@@ -137,7 +137,8 @@ function EventForm({
   const [start, setStart] = useState('16:30');
   const [end, setEnd] = useState('17:30');
   const [where, setWhere] = useState('');
-  const [repeat, setRepeat] = useState<'none' | 'weekly' | 'daily' | 'yearly'>('none');
+  const [repeat, setRepeat] =
+    useState<'none' | 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'yearly'>('none');
   const [remind, setRemind] = useState(0);
   const [visibleToAll, setVisibleToAll] = useState(true);
   const [prep, setPrep] = useState('');
@@ -145,18 +146,22 @@ function EventForm({
 
   const { careEnabled } = useStore();
   const categories: Category[] = careEnabled
-    ? ['activity', 'school', 'appointment', 'family', 'sharedCare']
-    : ['activity', 'school', 'appointment', 'family'];
+    ? ['activity', 'school', 'appointment', 'family', 'sharedCare', 'moneyIn', 'moneyOut']
+    : ['activity', 'school', 'appointment', 'family', 'moneyIn', 'moneyOut'];
 
   const save = () => {
     const recurrence: Recurrence =
       repeat === 'weekly'
         ? { kind: 'weekly', interval: 1, weekdays: [weekdayOf(date)] }
-        : repeat === 'daily'
-          ? { kind: 'daily', interval: 1 }
-          : repeat === 'yearly'
-            ? { kind: 'yearly' }
-            : { kind: 'none' };
+        : repeat === 'fortnightly'
+          ? { kind: 'weekly', interval: 2, weekdays: [weekdayOf(date)] }
+          : repeat === 'monthly'
+            ? { kind: 'monthlyDay', day: Number(date.slice(8, 10)) }
+            : repeat === 'daily'
+              ? { kind: 'daily', interval: 1 }
+              : repeat === 'yearly'
+                ? { kind: 'yearly' }
+                : { kind: 'none' };
 
     const visibility: Visibility = visibleToAll ? 'everyone' : { only: who };
 
@@ -265,6 +270,16 @@ function EventForm({
           </Chip>
           <Chip outline active={repeat === 'weekly'} onClick={() => setRepeat('weekly')}>
             every {dayName(date)}
+          </Chip>
+          <Chip
+            outline
+            active={repeat === 'fortnightly'}
+            onClick={() => setRepeat('fortnightly')}
+          >
+            every other {dayName(date)}
+          </Chip>
+          <Chip outline active={repeat === 'monthly'} onClick={() => setRepeat('monthly')}>
+            monthly on the {ordinal(Number(date.slice(8, 10)))}
           </Chip>
           <Chip outline active={repeat === 'daily'} onClick={() => setRepeat('daily')}>
             every day
@@ -962,6 +977,8 @@ function HouseholdField({
 }
 
 const CATEGORY_LABEL: Record<Category, string> = {
+  moneyIn: 'money in',
+  moneyOut: 'money out',
   activity: 'activity',
   school: 'school/daycare',
   appointment: 'appointment',

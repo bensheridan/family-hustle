@@ -42,6 +42,9 @@ export function Fridge() {
     work: true,
     task: false,
     sharedCare: true,
+    // not on the wall by default — the mortgage is nobody else's business
+    moneyIn: false,
+    moneyOut: false,
   });
   const [showTimes, setShowTimes] = useState(true);
   const [showNames, setShowNames] = useState(true);
@@ -314,6 +317,16 @@ export function Fridge() {
             onChange={(v) => setShow({ ...show, appointment: v })}
           />
           <Toggle label="tasks" on={show.task} onChange={(v) => setShow({ ...show, task: v })} />
+          <Toggle
+            label="money in"
+            on={show.moneyIn}
+            onChange={(v) => setShow({ ...show, moneyIn: v })}
+          />
+          <Toggle
+            label="money out"
+            on={show.moneyOut}
+            onChange={(v) => setShow({ ...show, moneyOut: v })}
+          />
           {careEnabled && (
             <Toggle
               label="shared care"

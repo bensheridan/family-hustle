@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import { Avatar, Chip, Sheet } from '../components/ui';
 import { CATEGORIES } from '../domain/categories';
 import { entryStartDate, timeLabel, worksFromHomeOn } from '../domain/occurrences';
-import { dayName, fullDate } from '../lib/date';
+import { dayName, fullDate, ordinal } from '../lib/date';
 import { ageOn, yearsSince } from '../domain/birthdays';
 
 /** Detail for one dated thing. Shows ownership and visibility separately,
@@ -153,10 +153,12 @@ function repeatLabel(entry: Occurrence['entry']): string {
   switch (r.kind) {
     case 'daily':
       return r.interval === 1 ? 'every day' : `every ${r.interval} days`;
-    case 'weekly':
-      return `every ${r.weekdays.map((w) => DAY_SHORT[w - 1]).join(', ')}`;
+    case 'weekly': {
+      const days = r.weekdays.map((w) => DAY_SHORT[w - 1]).join(', ');
+      return r.interval === 2 ? `every other ${days}` : `every ${days}`;
+    }
     case 'monthlyDay':
-      return `monthly on the ${r.day}`;
+      return `monthly on the ${ordinal(r.day)}`;
     case 'yearly':
       return 'every year';
     case 'roster':

@@ -246,6 +246,39 @@ export function seedState(): State {
       recurrence: { kind: 'roster', on: 4, off: 4 },
     }),
 
+    /* ---- money ----
+     * Pay dates and bill dates are just things that happen on days, so they
+     * sit on the calendar like anything else. No balances, no arithmetic —
+     * the useful part is knowing what leaves the account before it does. */
+    event({
+      title: 'Payday',
+      category: 'moneyIn',
+      personIds: [nadia.id, theo.id],
+      visibility: 'everyone',
+      startDate: d(3),
+      allDay: true,
+      recurrence: { kind: 'weekly', interval: 2, weekdays: [4] },
+    }),
+    event({
+      title: 'Rent',
+      category: 'moneyOut',
+      personIds: [nadia.id, theo.id],
+      visibility: 'everyone',
+      startDate: d(6),
+      allDay: true,
+      recurrence: { kind: 'monthlyDay', day: 20 },
+      remindDaysBefore: 3,
+    }),
+    event({
+      title: 'Power bill',
+      category: 'moneyOut',
+      personIds: [nadia.id, theo.id],
+      visibility: 'everyone',
+      startDate: d(14),
+      allDay: true,
+      recurrence: { kind: 'monthlyDay', day: 28 },
+    }),
+
     // ---- tasks ----
     task({
       title: 'Pay school trip',

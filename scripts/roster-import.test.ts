@@ -63,5 +63,73 @@ for (const [label, text] of cases) {
       `${r.anchorsMatched} anchors matched, ${r.warnings.length} warning(s)`,
   );
 }
-console.log(failures === 0 ? '\nall roster cases pass' : `\n${failures} FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+console.log(failures === 0 ? '\nall grid cases pass' : `\n${failures} grid cases FAILED`);
+if (failures > 0) process.exit(1);
+
+/* ---- a written-out list, which is how it actually arrives ----
+ * Verbatim from the list Emma was given when she asked for the roster
+ * written out, including the en dashes and the trailing sentence. */
+const written = `Theo Alder — October 2026 shifts
+\t•\tSaturday 3 October: 06:30–16:30
+\t•\tSunday 4 October: 06:30–14:30
+\t•\tMonday 5 October: 14:00–23:00
+\t•\tTuesday 6 October: 14:00–23:00
+\t•\tWednesday 7 October: 22:00–07:00
+\t•\tThursday 8 October: 22:00–07:00
+\t•\tMonday 12 October: 08:00–16:00
+\t•\tTuesday 13 October: 06:30–15:30
+\t•\tWednesday 14 October: 06:30–15:30
+\t•\tThursday 15 October: 14:00–23:00
+\t•\tFriday 16 October: 16:00–02:00
+\t•\tSaturday 17 October: 22:00–07:00
+\t•\tSunday 18 October: 22:00–07:00
+\t•\tFriday 23 October: 06:30–16:30
+\t•\tSaturday 24 October: 06:30–16:30
+\t•\tSunday 25 October: 14:00–23:00
+\t•\tMonday 26 October: 14:00–23:00
+\t•\tTuesday 27 October: 22:00–07:00
+\t•\tWednesday 28 October: 22:00–07:00
+I've left out the days shown as off duty.`;
+
+const writtenExpected: Record<string, [string, string]> = {
+  '2026-10-03': ['06:30', '16:30'], '2026-10-04': ['06:30', '14:30'],
+  '2026-10-05': ['14:00', '23:00'], '2026-10-06': ['14:00', '23:00'],
+  '2026-10-07': ['22:00', '07:00'], '2026-10-08': ['22:00', '07:00'],
+  '2026-10-12': ['08:00', '16:00'], '2026-10-13': ['06:30', '15:30'],
+  '2026-10-14': ['06:30', '15:30'], '2026-10-15': ['14:00', '23:00'],
+  '2026-10-16': ['16:00', '02:00'], '2026-10-17': ['22:00', '07:00'],
+  '2026-10-18': ['22:00', '07:00'], '2026-10-23': ['06:30', '16:30'],
+  '2026-10-24': ['06:30', '16:30'], '2026-10-25': ['14:00', '23:00'],
+  '2026-10-26': ['14:00', '23:00'], '2026-10-27': ['22:00', '07:00'],
+  '2026-10-28': ['22:00', '07:00'],
+};
+
+const listCases: [string, string][] = [
+  ['as given', written],
+  ['plainer wording', written.replace(/: /g, ' ').replace(/–/g, ' - ')],
+  ['no month named on each line', written.replace(/ October/g, '')],
+];
+
+let listFailed = 0;
+for (const [label, text] of listCases) {
+  const r = readRoster(text, '2026-10-01');
+  const got: Record<string, [string, string]> = {};
+  for (const c of r.cells) if (!c.off && c.start && c.end) got[c.date] = [c.start, c.end];
+  const keys = [...new Set([...Object.keys(writtenExpected), ...Object.keys(got)])].sort();
+  const wrong = keys.filter((k) => JSON.stringify(writtenExpected[k]) !== JSON.stringify(got[k]));
+  for (const k of wrong) console.log(`   ${k}: expected ${writtenExpected[k] ?? '—'}, got ${got[k] ?? '—'}`);
+  if (wrong.length > 0) listFailed++;
+  console.log(
+    `${wrong.length === 0 ? 'ok  ' : 'FAIL'} list, ${label} — ${Object.keys(got).length} shifts, ` +
+      `${r.warnings.length} warning(s)`,
+  );
+}
+
+// a grid must not be mistaken for a list, or the positional logic is skipped
+const gridRead = readRoster(rows, '2026-06-01');
+const gridOk = gridRead.shiftCount === 19 && !gridRead.fromList;
+console.log(`${gridOk ? 'ok  ' : 'FAIL'} a grid is still read as a grid (${gridRead.shiftCount} shifts)`);
+if (!gridOk) listFailed++;
+
+console.log(listFailed === 0 ? 'all list cases pass' : `${listFailed} list cases FAILED`);
+if (listFailed > 0) process.exit(1);

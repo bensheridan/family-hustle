@@ -14,6 +14,13 @@ import type { Id, ShiftEntry, ShiftType } from '../types';
  * better OCR than anything worth shipping ourselves, it is free, and the
  * roster never goes near a server.
  *
+ * Two shapes of paste arrive. A copied grid, where the dates have to be
+ * worked out from the printed day numbers, and a written-out list, where
+ * each line says its own date. From user testing the list is the one people
+ * reach for — they hand the screenshot to an assistant and ask for it in
+ * words — and it is also the one that cannot be misread, so it is offered
+ * first here even though the grid came first.
+ *
  * Everything lands in a grid to confirm before a single shift is saved.
  * Rosters decide whether someone is home for the school run, so a wrong
  * shift is worse than no shift, and nothing is written until it has been
@@ -74,7 +81,7 @@ export function ImportRoster() {
       <header className="topbar">
         <div>
           <div className="topbar__title">import a roster</div>
-          <div className="topbar__sub">a month at a time, from a screenshot</div>
+          <div className="topbar__sub">a month at a time, pasted in</div>
         </div>
         <Link className="btn btn--sm btn--quiet" to="/work">
           back
@@ -93,6 +100,11 @@ export function ImportRoster() {
           </li>
           <li>paste it below, then check the month before saving.</li>
         </ol>
+        <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
+          <strong>a written list works better.</strong> hand the screenshot to any assistant and
+          ask for the shifts as a list — <em>Saturday 3 October: 06:30–16:30</em>, one a line.
+          a list says its own dates, so nothing has to be worked out from the grid.
+        </p>
         <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
           nothing is uploaded. the text stays on this phone.
         </p>
@@ -121,13 +133,18 @@ export function ImportRoster() {
         </div>
       </FieldGroup>
 
-      <Field label="paste the roster" hint="day numbers and all — the numbers are how the dates are worked out.">
+      <Field
+        label="paste the roster"
+        hint="a list of dates, or the whole grid copied off the screenshot — either works."
+      >
         <textarea
           className="input"
           style={{ minHeight: 120, fontFamily: 'ui-monospace, monospace', fontSize: 13 }}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={'1 2 3 4 06:30 16:30 06:30 16:30 14:00 23:00\n14:00 23:00 22:00 07:00 …'}
+          placeholder={
+            'Saturday 3 October: 06:30–16:30\nSunday 4 October: 06:30–14:30\n…\n\nor a copied grid:\n1 2 3 4 06:30 16:30 06:30 16:30 …'
+          }
         />
       </Field>
 
@@ -139,15 +156,28 @@ export function ImportRoster() {
             </p>
           ))}
 
+          {read.detectedMonth && read.detectedMonth !== month.slice(0, 7) && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--block"
+              style={{ marginTop: 10 }}
+              onClick={() => setMonth(`${read.detectedMonth}-01`)}
+            >
+              this list looks like {monthYear(`${read.detectedMonth}-01`)} — switch to it
+            </button>
+          )}
+
           <section className="section">
             <SectionHead
               title={`${keeping.length} shift${keeping.length === 1 ? '' : 's'} found`}
               action={
-                read.anchorsMatched > 0 ? (
-                  <span className="muted" style={{ fontSize: 12.5 }}>
-                    {read.anchorsMatched} dates confirmed
-                  </span>
-                ) : undefined
+                <span className="muted" style={{ fontSize: 12.5 }}>
+                  {read.fromList
+                    ? 'dates read from the list'
+                    : read.anchorsMatched > 0
+                      ? `${read.anchorsMatched} dates confirmed`
+                      : ''}
+                </span>
               }
             />
             <div className="card card--pad">

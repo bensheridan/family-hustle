@@ -15,6 +15,7 @@ import { ImportRoster } from './routes/ImportRoster';
 import { Year } from './routes/Year';
 import { Data } from './routes/Data';
 import { PreviewBanner } from './components/CareBits';
+import { UpdateBar } from './components/UpdateBar';
 
 export function App() {
   const { state } = useStore();
@@ -29,6 +30,7 @@ export function App() {
 
   return (
     <div className="app">
+      <UpdateBar />
       <PreviewBanner />
       <main className="app__main" style={bare ? { padding: 0 } : undefined}>
         <Routes>

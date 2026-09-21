@@ -1498,3 +1498,28 @@
   color: var(--ink);
   font-size: 13.5px;
 }
+
+/* "there's a newer version" — above everything, because it explains why
+   the screen does not match what someone has just been told is fixed. */
+.updatebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 13.5px;
+}
+
+.updatebar button {
+  flex: none;
+  border: 0;
+  border-radius: var(--r-pill);
+  padding: 6px 14px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

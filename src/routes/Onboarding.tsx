@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { newId, useStore } from '../state/store';
 import { blankState } from '../data/seed';
 import { Avatar, Chip, FieldGroup, Toggle } from '../components/ui';
 import { PERSON_COLOURS, colourVar } from '../domain/categories';
-import type { HouseholdMode, Person, PersonRole } from '../types';
+import { parseBackup, type BackupSummary } from '../domain/backup';
+import type { HouseholdMode, Person, PersonRole, State } from '../types';
 
 type Step = 'welcome' | 'people' | 'setup' | 'work' | 'done';
 
@@ -18,6 +19,14 @@ export function Onboarding() {
     navigate('/', { replace: true });
   };
 
+  /* Someone arriving with a file already has a family. Loading it is a way
+   * in of its own, not something to do after building a household you would
+   * only have to throw away. */
+  const load = (loaded: State) => {
+    dispatch({ type: 'reset', state: { ...loaded, settings: { ...loaded.settings, onboarded: true } } });
+    navigate('/', { replace: true });
+  };
+
   return (
     <div className="onb">
       {step === 'welcome' && (
@@ -27,6 +36,7 @@ export function Onboarding() {
             setStep('people');
           }}
           onDemo={finish}
+          onLoad={load}
         />
       )}
 
@@ -49,7 +59,30 @@ export function Onboarding() {
 
 /* ---------------- steps ---------------- */
 
-function Welcome({ onStart, onDemo }: { onStart: () => void; onDemo: () => void }) {
+function Welcome({
+  onStart,
+  onDemo,
+  onLoad,
+}: {
+  onStart: () => void;
+  onDemo: () => void;
+  onLoad: (state: State) => void;
+}) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [found, setFound] = useState<{ state: State; summary: BackupSummary } | null>(null);
+  const [error, setError] = useState<string>();
+
+  const onFile = async (file: File) => {
+    setError(undefined);
+    const result = parseBackup(await file.text());
+    if (!result.ok) {
+      setFound(null);
+      setError(result.error);
+      return;
+    }
+    setFound({ state: result.state, summary: result.summary });
+  };
+
   return (
     <div className="onb__pane onb__pane--hero">
       <div className="onb__brandmark">
@@ -66,16 +99,75 @@ function Welcome({ onStart, onDemo }: { onStart: () => void; onDemo: () => void 
         school, activities, appointments, work, shifts and the chaos in between —
         all on one calendar.
       </p>
-      <div className="onb__actions">
-        <button type="button" className="btn btn--accent btn--block" onClick={onStart}>
-          set up my family
-        </button>
-        <button type="button" className="btn btn--ghost btn--block" onClick={onDemo}>
-          look around with a demo family
-        </button>
-      </div>
+
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/json,.json"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void onFile(f);
+          e.target.value = '';
+        }}
+      />
+
+      {error && <p className="importwarn">{error}</p>}
+
+      {found ? (
+        <div className="onb__actions">
+          <div className="card card--pad" style={{ textAlign: 'left' }}>
+            <div className="row__title">{nameFor(found.state)}</div>
+            <div className="row__meta" style={{ whiteSpace: 'normal' }}>
+              {found.summary.people} people · {found.summary.entries} things on the calendar
+              {found.summary.savedAt
+                ? ` · saved ${new Date(found.summary.savedAt).toLocaleDateString()}`
+                : ''}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn--accent btn--block"
+            onClick={() => onLoad(found.state)}
+          >
+            open this family
+          </button>
+          <button
+            type="button"
+            className="btn btn--quiet btn--block"
+            onClick={() => setFound(null)}
+          >
+            that’s not the right file
+          </button>
+        </div>
+      ) : (
+        <div className="onb__actions">
+          <button type="button" className="btn btn--accent btn--block" onClick={onStart}>
+            set up my family
+          </button>
+          <button type="button" className="btn btn--ghost btn--block" onClick={onDemo}>
+            look around with a demo family
+          </button>
+          <button
+            type="button"
+            className="btn btn--quiet btn--block"
+            onClick={() => fileInput.current?.click()}
+          >
+            open a family I’ve saved
+          </button>
+        </div>
+      )}
     </div>
   );
+}
+
+/** Enough of the file to recognise it as theirs without listing the family
+ *  out on a screen anyone might be standing behind. */
+function nameFor(state: State): string {
+  const names = state.people.filter((p) => p.role !== 'pet').map((p) => p.name);
+  if (names.length === 0) return 'a saved family';
+  if (names.length <= 2) return names.join(' and ');
+  return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
 }
 
 function People({

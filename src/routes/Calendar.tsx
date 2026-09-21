@@ -216,6 +216,7 @@ export function CalendarPage() {
           handovers={handovers}
           rarity={rarity}
           spans={spans}
+          onOpen={setOpen}
           shades={shades}
           selected={selected}
           onSelect={setSelected}
@@ -340,6 +341,7 @@ function MonthView({
   shades,
   selected,
   onSelect,
+  onOpen,
   mondayFirst,
 }: {
   cursor: ISODate;
@@ -350,6 +352,7 @@ function MonthView({
   shades: Map<ISODate, string | undefined>;
   selected: ISODate;
   onSelect: (d: ISODate) => void;
+  onOpen: (occ: Occurrence) => void;
   mondayFirst: boolean;
 }) {
   const { personById } = useStore();
@@ -462,7 +465,10 @@ function MonthView({
                           borderColor: colour,
                         }}
                         title={b.occ.title}
-                        onClick={() => onSelect(b.startsHere ? b.from : weekFrom)}
+                        onClick={() => {
+                          onSelect(b.startsHere ? b.from : weekFrom);
+                          onOpen(b.occ);
+                        }}
                       >
                         {b.startsHere ? b.occ.title : `… ${b.occ.title}`}
                       </button>

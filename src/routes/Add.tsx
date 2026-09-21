@@ -72,9 +72,15 @@ export function AddPage() {
 
   if (editing) {
     const done = () => navigate(-1);
-    if (editing.type === 'shift') return <ShiftForm onBack={done} editing={editing} />;
-    if (editing.type === 'task') return <TaskForm onBack={done} editing={editing} />;
-    return <EventForm kind="event" onBack={done} editing={editing} />;
+    /* Keyed by the entry: the form reads its fields once when it mounts, so
+     * moving from editing one thing to editing another has to be a new form,
+     * not the old one with a different prop. Otherwise the second thing
+     * opens showing the first thing's details. */
+    if (editing.type === 'shift')
+      return <ShiftForm key={editing.id} onBack={done} editing={editing} />;
+    if (editing.type === 'task')
+      return <TaskForm key={editing.id} onBack={done} editing={editing} />;
+    return <EventForm key={editing.id} kind="event" onBack={done} editing={editing} />;
   }
 
   if (!kind) {

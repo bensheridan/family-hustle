@@ -3,15 +3,18 @@ import { Link } from 'react-router-dom';
 import { newId, useStore } from '../state/store';
 import {
   CARE_PATTERNS,
+  datesBetween,
   handoverLabel,
   householdOn,
   makeSchedule,
   nextHandover,
+  overrideRuns,
   patternById,
+  patternHouseholdOn,
   scheduleFor,
   stretchEnd,
 } from '../domain/care';
-import { addDays, dayName, shortDate, today } from '../lib/date';
+import { addDays, dayName, fromISO, shortDate, startOfWeek, today } from '../lib/date';
 import { Avatar, Chip, SectionHead, Sheet } from '../components/ui';
 import { PERSON_COLOURS, colourVar } from '../domain/categories';
 import { HouseholdDot } from '../components/CareBits';
@@ -292,10 +295,220 @@ function MoveArrangement({ personId, date }: { personId: Id; date: string }) {
           <CycleEditor personId={personId} />
           <p className="field__hint">
             the fortnight repeats from {shortDate(schedule.anchorDate)}. changing a day here
-            changes it every fortnight — to move one weekend only, change it on the calendar.
+            changes it every fortnight.
           </p>
+
+          <div className="divider" />
+          <RealDates personId={personId} />
         </>
       )}
+    </div>
+  );
+}
+
+/** The actual dates, where real life happens.
+ *
+ * From user testing, the pattern is only ever half the story: Christmas and
+ * the school holidays do not follow it, an extra night gets added here and
+ * there, and a changeover that lands on a public holiday gets nudged so it
+ * falls on a school day instead. None of that is a pattern — it is this
+ * fortnight, differing from the usual, and it needs to be sayable without
+ * bending the pattern out of shape for every other week of the year.
+ *
+ * So the fortnight above stays the default and this is the exception on top.
+ * Days show their real dates, because "the next few weeks" is what someone
+ * is actually trying to get right.
+ */
+function RealDates({ personId }: { personId: Id }) {
+  const { state, dispatch, households } = useStore();
+  const [start, setStart] = useState(() => startOfWeek(today(), true));
+  const [stretching, setStretching] = useState(false);
+
+  const schedule = scheduleFor(state.careSchedules, personId);
+  if (!schedule) return null;
+
+  const weeks = 4;
+  const days = datesBetween(start, addDays(start, weeks * 7 - 1));
+  const runs = overrideRuns(schedule);
+
+  /* Tapping moves to the next home. Landing back on what the pattern
+   * already said is an undo, not a change that happens to agree — otherwise
+   * a mis-tap leaves a permanent entry in the list below. */
+  const tap = (date: string) => {
+    const current = householdOn(schedule, date);
+    const i = households.findIndex((h) => h.id === current);
+    const next = households[(i + 1) % households.length].id;
+    if (next === patternHouseholdOn(schedule, date)) {
+      dispatch({ type: 'care/clearOverride', personId, date });
+    } else {
+      dispatch({ type: 'care/override', personId, date, householdId: next });
+    }
+  };
+
+  return (
+    <>
+      <div className="dateshead">
+        <span className="field__label">the actual dates</span>
+        <div className="dateshead__nav">
+          <button type="button" className="stepper" onClick={() => setStart(addDays(start, -28))}>
+            ‹
+          </button>
+          <button type="button" className="stepper" onClick={() => setStart(addDays(start, 28))}>
+            ›
+          </button>
+        </div>
+      </div>
+
+      <div className="realdates">
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+          <span key={i} className="realdates__head">
+            {d}
+          </span>
+        ))}
+        {days.map((date) => {
+          const household = households.find((h) => h.id === householdOn(schedule, date));
+          const changed = householdOn(schedule, date) !== patternHouseholdOn(schedule, date);
+          const first = fromISO(date).getDate() === 1;
+          return (
+            <button
+              key={date}
+              type="button"
+              className="realdates__day"
+              data-changed={changed}
+              data-today={date === today()}
+              style={{ background: household ? colourVar(household.colour) : 'var(--surface-2)' }}
+              title={`${dayName(date)} ${shortDate(date)} — ${household?.name ?? 'unset'}`}
+              onClick={() => tap(date)}
+            >
+              {first ? shortDate(date) : fromISO(date).getDate()}
+            </button>
+          );
+        })}
+      </div>
+      <p className="field__hint">
+        tap a day to move just that date. changed days are marked.
+      </p>
+
+      {stretching ? (
+        <Stretch personId={personId} onDone={() => setStretching(false)} />
+      ) : (
+        <button
+          type="button"
+          className="btn btn--ghost btn--block"
+          style={{ marginTop: 10 }}
+          onClick={() => setStretching(true)}
+        >
+          change a run of days
+        </button>
+      )}
+
+      {runs.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="field__label">changed from the usual</div>
+          {runs.map((run) => {
+            const household = households.find((h) => h.id === run.householdId);
+            return (
+              <div key={run.from} className="changerow">
+                <span>
+                  <strong>
+                    {run.from === run.to
+                      ? `${dayName(run.from).slice(0, 3)} ${shortDate(run.from)}`
+                      : `${shortDate(run.from)} – ${shortDate(run.to)}`}
+                  </strong>{' '}
+                  at {household?.name ?? 'somewhere else'}
+                  {run.dates.length > 1 ? ` · ${run.dates.length} days` : ''}
+                </span>
+                <button
+                  type="button"
+                  aria-label="put these days back"
+                  onClick={() =>
+                    dispatch({ type: 'care/clearOverrideRange', personId, dates: run.dates })
+                  }
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** "from here to here, they are at —". The shape people describe holidays in. */
+function Stretch({ personId, onDone }: { personId: Id; onDone: () => void }) {
+  const { state, dispatch, households } = useStore();
+  const [from, setFrom] = useState(today());
+  const [to, setTo] = useState(addDays(today(), 6));
+
+  const schedule = scheduleFor(state.careSchedules, personId);
+  if (!schedule) return null;
+
+  const nights = datesBetween(from, to).length;
+
+  /* Only the days that genuinely differ are recorded. A stretch usually
+   * overlaps days the pattern already had right, and storing those as
+   * changes would quietly pin them: edit the fortnight later and days
+   * nobody chose would stay behind, anchored to a pattern that has moved. */
+  const apply = (householdId: Id) => {
+    const all = datesBetween(from, to);
+    const differs = all.filter((d) => patternHouseholdOn(schedule, d) !== householdId);
+    const agrees = all.filter((d) => patternHouseholdOn(schedule, d) === householdId);
+    if (differs.length > 0) {
+      dispatch({ type: 'care/overrideRange', personId, dates: differs, householdId });
+    }
+    if (agrees.length > 0) {
+      dispatch({ type: 'care/clearOverrideRange', personId, dates: agrees });
+    }
+    onDone();
+  };
+
+  return (
+    <div className="card card--pad" style={{ marginTop: 10, background: 'var(--surface-2)' }}>
+      <div className="stretchrow">
+        <label className="stretchrow__field">
+          <span className="field__label">from</span>
+          <input
+            className="input"
+            type="date"
+            value={from}
+            onChange={(e) => e.target.value && setFrom(e.target.value)}
+          />
+        </label>
+        <label className="stretchrow__field">
+          <span className="field__label">to</span>
+          <input
+            className="input"
+            type="date"
+            value={to}
+            onChange={(e) => e.target.value && setTo(e.target.value)}
+          />
+        </label>
+      </div>
+      <p className="field__hint" style={{ marginTop: 6 }}>
+        {nights} {nights === 1 ? 'day' : 'days'}, both ends included.
+      </p>
+
+      <div className="field__label" style={{ marginTop: 10 }}>
+        where are they for that?
+      </div>
+      <div className="choices">
+        {households.map((h) => (
+          <Chip
+            key={h.id}
+            outline
+            onClick={() => apply(h.id)}
+          >
+            <HouseholdDot household={h} />
+            {h.name}
+          </Chip>
+        ))}
+      </div>
+
+      <button type="button" className="btn btn--quiet btn--block" style={{ marginTop: 10 }} onClick={onDone}>
+        cancel
+      </button>
     </div>
   );
 }

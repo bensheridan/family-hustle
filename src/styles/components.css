@@ -1523,3 +1523,101 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* The actual dates under a care pattern — the exception layer, where
+   Christmas and the odd extra night get said. */
+.dateshead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.dateshead__nav {
+  display: flex;
+  gap: 6px;
+}
+
+.realdates {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.realdates__head {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  padding-bottom: 2px;
+}
+
+.realdates__day {
+  position: relative;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: var(--r-sm);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+/* A changed day is marked, not just coloured: two homes can be told apart
+   by colour, but "different from the usual" cannot. */
+.realdates__day[data-changed='true']::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+}
+
+.realdates__day[data-today='true'] {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.stretchrow {
+  display: flex;
+  gap: 10px;
+}
+
+.stretchrow__field {
+  flex: 1;
+  display: block;
+}
+
+.changerow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+}
+
+.changerow:last-child {
+  border-bottom: 0;
+}
+
+.changerow button {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 6px;
+}

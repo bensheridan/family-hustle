@@ -85,10 +85,64 @@ export function makeSchedule(
 export function householdOn(schedule: CareSchedule, date: ISODate): Id | undefined {
   const override = schedule.overrides[date];
   if (override) return override;
+  return patternHouseholdOn(schedule, date);
+}
+
+/** What the repeating pattern says, with any one-off change ignored.
+ *
+ * Needed to tell a real change from a day that was set to what it already
+ * was: setting a day back to what the pattern says should remove the change,
+ * not record a second one that happens to agree. */
+export function patternHouseholdOn(schedule: CareSchedule, date: ISODate): Id | undefined {
   if (schedule.cycle.length === 0) return undefined;
   const delta = diffDays(date, schedule.anchorDate);
   const i = ((delta % schedule.cycle.length) + schedule.cycle.length) % schedule.cycle.length;
   return schedule.cycle[i];
+}
+
+/** The changes to the pattern, as stretches rather than loose days.
+ *
+ * From user testing: people describe these as periods — "Christmas at their
+ * dad's", "the first week of the holidays" — not as a list of dates, so
+ * consecutive days at the same home are shown as the one change they were
+ * meant to be, and come back out together. */
+export interface OverrideRun {
+  from: ISODate;
+  to: ISODate;
+  householdId: Id;
+  dates: ISODate[];
+}
+
+export function overrideRuns(schedule: CareSchedule): OverrideRun[] {
+  const changed = Object.keys(schedule.overrides)
+    .filter((d) => schedule.overrides[d] !== patternHouseholdOn(schedule, d))
+    .sort();
+
+  const runs: OverrideRun[] = [];
+  for (const date of changed) {
+    const householdId = schedule.overrides[date];
+    const last = runs[runs.length - 1];
+    if (last && last.householdId === householdId && addDays(last.to, 1) === date) {
+      last.to = date;
+      last.dates.push(date);
+    } else {
+      runs.push({ from: date, to: date, householdId, dates: [date] });
+    }
+  }
+  return runs;
+}
+
+/** Every date from one to the other, inclusive. Order does not matter —
+ *  someone picking dates does not always pick them forwards. */
+export function datesBetween(a: ISODate, b: ISODate): ISODate[] {
+  const [from, to] = a <= b ? [a, b] : [b, a];
+  const out: ISODate[] = [];
+  let cursor = from;
+  while (cursor <= to) {
+    out.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+  return out;
 }
 
 export interface Handover {

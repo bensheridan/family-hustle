@@ -40,6 +40,8 @@ type Action =
   | { type: 'holidays/clear' }
   | { type: 'care/override'; personId: Id; date: ISODate; householdId: Id }
   | { type: 'care/clearOverride'; personId: Id; date: ISODate }
+  | { type: 'care/overrideRange'; personId: Id; dates: ISODate[]; householdId: Id }
+  | { type: 'care/clearOverrideRange'; personId: Id; dates: ISODate[] }
   | { type: 'care/cycleDay'; personId: Id; index: number; householdId: Id }
   | { type: 'person/add'; person: Person }
   | { type: 'person/update'; id: Id; patch: Partial<Person> }
@@ -131,6 +133,28 @@ function reducer(state: State, action: Action): State {
           if (s.personId !== action.personId) return s;
           const overrides = { ...s.overrides };
           delete overrides[action.date];
+          return { ...s, overrides };
+        }),
+      };
+
+    case 'care/overrideRange':
+      return {
+        ...state,
+        careSchedules: state.careSchedules.map((s) => {
+          if (s.personId !== action.personId) return s;
+          const overrides = { ...s.overrides };
+          for (const date of action.dates) overrides[date] = action.householdId;
+          return { ...s, overrides };
+        }),
+      };
+
+    case 'care/clearOverrideRange':
+      return {
+        ...state,
+        careSchedules: state.careSchedules.map((s) => {
+          if (s.personId !== action.personId) return s;
+          const overrides = { ...s.overrides };
+          for (const date of action.dates) delete overrides[date];
           return { ...s, overrides };
         }),
       };

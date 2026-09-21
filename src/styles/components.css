@@ -991,6 +991,15 @@
   font-size: 13px;
   color: var(--ink-2);
   margin-top: 1px;
+  /* A changeover day says more than a name — "Dad's until 3:15pm, then
+     Home · at school" — so this wraps to a second line on a phone rather
+     than squeezing each part into its own narrow column. */
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.carewho__at > .dot {
+  flex: none;
 }
 
 .carewho__swap {

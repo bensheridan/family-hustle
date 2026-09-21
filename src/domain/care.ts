@@ -7,8 +7,8 @@
  * as one more thing the family has going on.
  */
 
-import type { CareSchedule, Entry, Household, Id, ISODate, Settings } from '../types';
-import { addDays, dayName, diffDays, startOfWeek, weekday } from '../lib/date';
+import type { CareSchedule, Entry, Household, Id, ISODate, Settings, Time } from '../types';
+import { addDays, dayName, diffDays, formatTime, startOfWeek, weekday } from '../lib/date';
 
 export interface CarePattern {
   id: string;
@@ -150,14 +150,29 @@ export interface Handover {
   date: ISODate;
   from: Id;
   to: Id;
+  /** when the changeover happens, if the family has a set time for it */
+  time?: Time;
+  place?: string;
 }
 
-/** A handover is simply a day whose household differs from the day before. */
+/** A handover is simply a day whose household differs from the day before.
+ *
+ * The day itself belongs to the home they go to — that is where they sleep.
+ * A time does not change that; it says who has them for the part of the day
+ * before it, which is the bit nobody can work out from a shaded square and
+ * is usually the school run. */
 export function handoverOn(schedule: CareSchedule, date: ISODate): Handover | null {
   const to = householdOn(schedule, date);
   const from = householdOn(schedule, addDays(date, -1));
   if (!to || !from || to === from) return null;
-  return { personId: schedule.personId, date, from, to };
+  return {
+    personId: schedule.personId,
+    date,
+    from,
+    to,
+    time: schedule.handoverTime,
+    place: schedule.handoverPlace,
+  };
 }
 
 export function handoversBetween(
@@ -224,7 +239,23 @@ export function handoverLabel(h: Handover, households: Household[], today: ISODa
   const days = diffDays(h.date, today);
   const when =
     days === 0 ? 'today' : days === 1 ? 'tomorrow' : days < 7 ? dayName(h.date) : `on ${dayName(h.date)}`;
-  return `to ${to} ${when}`;
+  return `to ${to} ${when}${h.time ? ` at ${formatTime(h.time)}` : ''}`;
+}
+
+/** Who has them either side of the changeover — the sentence that answers
+ *  "so am I doing the school run or are they?".
+ *
+ *  Without a time there is nothing honest to say beyond where they end up,
+ *  so it says only that rather than implying a changeover at midnight. */
+export function handoverSplit(
+  h: Handover,
+  households: Household[],
+): { before: string; after: string; time?: Time; place?: string } | null {
+  if (!h.time) return null;
+  const from = households.find((x) => x.id === h.from)?.name;
+  const to = households.find((x) => x.id === h.to)?.name;
+  if (!from || !to) return null;
+  return { before: from, after: to, time: h.time, place: h.place };
 }
 
 /** How long this stretch at the current household runs. */

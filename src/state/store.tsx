@@ -42,6 +42,7 @@ type Action =
   | { type: 'care/clearOverride'; personId: Id; date: ISODate }
   | { type: 'care/overrideRange'; personId: Id; dates: ISODate[]; householdId: Id }
   | { type: 'care/clearOverrideRange'; personId: Id; dates: ISODate[] }
+  | { type: 'care/handoverDetails'; personId: Id; time?: string; place?: string }
   | { type: 'care/cycleDay'; personId: Id; index: number; householdId: Id }
   | { type: 'person/add'; person: Person }
   | { type: 'person/update'; id: Id; patch: Partial<Person> }
@@ -157,6 +158,16 @@ function reducer(state: State, action: Action): State {
           for (const date of action.dates) delete overrides[date];
           return { ...s, overrides };
         }),
+      };
+
+    case 'care/handoverDetails':
+      return {
+        ...state,
+        careSchedules: state.careSchedules.map((s) =>
+          s.personId === action.personId
+            ? { ...s, handoverTime: action.time || undefined, handoverPlace: action.place || undefined }
+            : s,
+        ),
       };
 
     case 'care/cycleDay':

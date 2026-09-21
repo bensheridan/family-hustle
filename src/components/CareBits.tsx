@@ -10,7 +10,7 @@ import {
   stretchEnd,
 } from '../domain/care';
 import { colourVar } from '../domain/categories';
-import { dayName, fullDate, today } from '../lib/date';
+import { dayName, formatTime, fullDate, today } from '../lib/date';
 import { useStore } from '../state/store';
 import { Avatar, Chip, Sheet } from './ui';
 import type { Household, Id, ISODate } from '../types';
@@ -89,7 +89,8 @@ export function WhosGotTheKids({
       const swapping = handoverOn(schedule, date);
       const next = nextHandover(schedule, date);
       const overridden = Boolean(schedule.overrides[date]);
-      return { child, household, until, swapping, next, overridden };
+      const fromName = swapping ? householdById(swapping.from)?.name : undefined;
+      return { child, household, until, swapping, next, overridden, fromName };
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 
@@ -97,7 +98,7 @@ export function WhosGotTheKids({
 
   return (
     <div className="card card--pad carewho">
-      {rows.map(({ child, household, until, swapping, next, overridden }) => (
+      {rows.map(({ child, household, until, swapping, next, overridden, fromName }) => (
         <div
           key={child.id}
           className="carewho__row"
@@ -121,17 +122,24 @@ export function WhosGotTheKids({
                 className="dot"
                 style={{ background: household ? colourVar(household.colour) : 'var(--ink-3)' }}
               />
-              {household?.name ?? 'unscheduled'}
+              {/* On a changeover day with a set time, where they end up is
+                  only half the day. Say both halves: the first one is the
+                  school run, and it belongs to the home they came from. */}
+              {swapping?.time && fromName
+                ? `${fromName} until ${formatTime(swapping.time)}, then ${household?.name ?? 'the other home'}`
+                : (household?.name ?? 'unscheduled')}
               {/* Always say when they next move — "at Dad's" on its own makes
                   you go and check the schedule, which is the thing this card
                   exists to save you. */}
               <span className="muted">
                 {' · '}
-                {until !== date
-                  ? `until ${dayName(until)}`
-                  : next
-                    ? handoverLabel(next, households, date)
-                    : 'no swap coming up'}
+                {swapping?.time && swapping.place
+                  ? swapping.place
+                  : until !== date
+                    ? `until ${dayName(until)}`
+                    : next
+                      ? handoverLabel(next, households, date)
+                      : 'no swap coming up'}
               </span>
             </div>
           </div>
@@ -220,14 +228,21 @@ export function HandoverRows({ handovers }: { handovers: Handover[] }) {
         return (
           <Link key={key} to="/households" className="row handover">
             <span className="row__rail" style={{ background: colourVar(to.colour) }} />
-            <span className="row__time handover__icon" aria-hidden>
-              ⇄
-            </span>
+            {group[0].time ? (
+              <span className="row__time">{formatTime(group[0].time)}</span>
+            ) : (
+              <span className="row__time handover__icon" aria-hidden>
+                ⇄
+              </span>
+            )}
             <span className="row__main">
               <span className="row__title">
                 {joinNames(names)} to {to.name}
               </span>
-              <span className="row__meta">handover{from ? ` · from ${from.name}` : ''}</span>
+              <span className="row__meta">
+                handover{from ? ` · from ${from.name}` : ''}
+                {group[0].place ? ` · ${group[0].place}` : ''}
+              </span>
             </span>
           </Link>
         );

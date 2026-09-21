@@ -299,10 +299,69 @@ function MoveArrangement({ personId, date }: { personId: Id; date: string }) {
           </p>
 
           <div className="divider" />
+          <HandoverDetails personId={personId} />
+
+          <div className="divider" />
           <RealDates personId={personId} />
         </>
       )}
     </div>
+  );
+}
+
+/** When and where the changeover happens.
+ *
+ * The shaded day says where they sleep, which leaves the most practical
+ * question of a changeover day unanswered: the morning and the school run
+ * belong to whoever had them the night before, and that is invisible until
+ * someone says what time the swap is. Both fields are optional — plenty of
+ * families swap whenever it suits, and a made-up time would be worse than
+ * none.
+ */
+function HandoverDetails({ personId }: { personId: Id }) {
+  const { state, dispatch } = useStore();
+  const schedule = scheduleFor(state.careSchedules, personId);
+  if (!schedule) return null;
+
+  const set = (patch: { time?: string; place?: string }) =>
+    dispatch({
+      type: 'care/handoverDetails',
+      personId,
+      time: schedule.handoverTime,
+      place: schedule.handoverPlace,
+      ...patch,
+    });
+
+  return (
+    <>
+      <div className="field__label">the changeover</div>
+      <div className="stretchrow" style={{ marginTop: 6 }}>
+        <label className="stretchrow__field">
+          <span className="field__hint">what time</span>
+          <input
+            className="input"
+            type="time"
+            value={schedule.handoverTime ?? ''}
+            onChange={(e) => set({ time: e.target.value })}
+          />
+        </label>
+        <label className="stretchrow__field">
+          <span className="field__hint">where</span>
+          <input
+            className="input"
+            type="text"
+            placeholder="at school"
+            value={schedule.handoverPlace ?? ''}
+            onChange={(e) => set({ place: e.target.value })}
+          />
+        </label>
+      </div>
+      <p className="field__hint" style={{ marginTop: 6 }}>
+        {schedule.handoverTime
+          ? 'on a changeover day the morning belongs to the home they came from — so this is what says who does the school run.'
+          : 'optional. without it, a changeover day just shows where they end up.'}
+      </p>
+    </>
   );
 }
 

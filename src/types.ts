@@ -119,6 +119,11 @@ export interface CareSchedule {
   patternId: string;
   /** one-off changes: ISO date → household id */
   overrides: Record<ISODate, Id>;
+  /** when the changeover usually happens, if the family has a set time */
+  handoverTime?: Time;
+  /** and where — 'at school', 'at the gate'. This is what decides who does
+   *  the school run on a changeover day. */
+  handoverPlace?: string;
 }
 
 export type Category =

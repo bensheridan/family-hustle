@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test": "npm run test:recurrence && npm run test:roster",
     "test:roster": "esbuild scripts/roster-import.test.ts --bundle --platform=node --format=esm --outfile=.test-build/roster.mjs --log-level=warning && node .test-build/roster.mjs",
     "test:recurrence": "esbuild scripts/recurrence.test.ts --bundle --platform=node --format=esm --outfile=.test-build/recurrence.mjs --log-level=warning && TZ=Pacific/Auckland node .test-build/recurrence.mjs"
   },

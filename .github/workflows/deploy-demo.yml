@@ -30,6 +30,12 @@ jobs:
 
       - run: npm ci
 
+      # The date and roster tests, before anything is built. A demo that is
+      # wrong about when a holiday falls, or drops half a roster, is worse
+      # than a demo that is a few minutes out of date — so this blocks the
+      # deploy rather than reporting alongside it.
+      - run: npm test
+
       # typechecks as well as builds — a broken demo is worse than no demo
       - run: npm run build
 

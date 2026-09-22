@@ -1,7 +1,8 @@
 /* Monthly and fortnightly dates, which money depends on being exactly right.
  * Run with: npm run test:recurrence */
 import { occursOn } from '../src/domain/occurrences';
-import type { EventEntry } from '../src/types';
+import { nextHoliday } from '../src/domain/holidays';
+import type { EventEntry, PublicHoliday } from '../src/types';
 
 const ev = (startDate: string, recurrence: EventEntry['recurrence']): EventEntry => ({
   id: 'x', type: 'event', title: 't', category: 'moneyOut', personIds: [],
@@ -86,3 +87,47 @@ console.log(altFailed === 0
   ? `all ${altCases.length + 1} alternating cases pass`
   : `${altFailed} alternating cases FAILED`);
 if (altFailed > 0) process.exit(1);
+
+/* ---------------------------------------------------------------------------
+ * How far away a public holiday is.
+ *
+ * This used to measure the gap by handing two YYYY-MM-DD strings to
+ * new Date(), which reads them as UTC midnight — the one place in the app
+ * that left local time, against the rule the rest of the date handling
+ * depends on. It gave the right answer, because both ends were wrong in the
+ * same direction. These cases pin the answer down so it stays right now the
+ * gap is measured in local days, where a 23 or 25 hour day is a real thing.
+ *
+ * NZ clocks go forward on 27 Sep 2026 and back on 5 Apr 2027, so the pairs
+ * below straddle both. Run under TZ=Pacific/Auckland to mean anything.
+ */
+const hol = (date: string, name: string): PublicHoliday => ({
+  id: `h-${date}`, date, name, region: 'national',
+});
+
+const holidayCases: [string, PublicHoliday[], string, number, string | undefined][] = [
+  // [label, holidays, from, withinDays, expected name]
+  ['the day itself counts', [hol('2026-09-28', 'A')], '2026-09-28', 14, 'A'],
+  ['yesterday does not', [hol('2026-09-27', 'A')], '2026-09-28', 14, undefined],
+  ['across the spring clock change', [hol('2026-09-28', 'A')], '2026-09-26', 14, 'A'],
+  ['spring change, exactly on the limit', [hol('2026-10-10', 'A')], '2026-09-26', 14, 'A'],
+  ['spring change, one day past it', [hol('2026-10-11', 'A')], '2026-09-26', 14, undefined],
+  ['across the autumn clock change', [hol('2027-04-06', 'A')], '2027-04-04', 14, 'A'],
+  ['autumn change, exactly on the limit', [hol('2027-04-18', 'A')], '2027-04-04', 14, 'A'],
+  ['autumn change, one day past it', [hol('2027-04-19', 'A')], '2027-04-04', 14, undefined],
+  ['the nearest one wins', [hol('2026-12-28', 'B'), hol('2026-12-25', 'A')], '2026-12-24', 14, 'A'],
+];
+
+let holFailed = 0;
+for (const [label, list, from, within, want] of holidayCases) {
+  const got = nextHoliday(list, from, within)?.name;
+  if (got !== want) {
+    console.log(`FAIL ${label} — wanted ${want ?? 'nothing'}, got ${got ?? 'nothing'}`);
+    holFailed++;
+  }
+}
+
+console.log(holFailed === 0
+  ? `all ${holidayCases.length} next-holiday cases pass (TZ=${process.env.TZ ?? 'system'})`
+  : `${holFailed} next-holiday cases FAILED`);
+if (holFailed > 0) process.exit(1);

@@ -17,6 +17,7 @@
  */
 
 import type { EventEntry, ISODate, PublicHoliday } from '../types';
+import { diffDays } from '../lib/date';
 
 type Seed = Omit<PublicHoliday, 'id'>;
 
@@ -89,9 +90,7 @@ export function nextHoliday(
 ): PublicHoliday | undefined {
   const sorted = [...holidays].sort((a, b) => a.date.localeCompare(b.date));
   return sorted.find((h) => {
-    const days = Math.round(
-      (new Date(h.date).getTime() - new Date(from).getTime()) / 86400000,
-    );
+    const days = diffDays(h.date, from);
     return days >= 0 && days <= withinDays;
   });
 }

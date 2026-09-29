@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useRef, useState, type CSSProperties, type TouchEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../state/store';
 import {
@@ -139,6 +139,25 @@ export function CalendarPage() {
     else setCursor(addDays(cursor, dir));
   };
 
+  /* A sideways flick moves on a page, the way a paper calendar turns. It has
+   * to be clearly sideways, so scrolling down the page never flips the month. */
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const swipe = {
+    onTouchStart: (e: TouchEvent) => {
+      const t = e.touches[0];
+      touch.current = { x: t.clientX, y: t.clientY };
+    },
+    onTouchEnd: (e: TouchEvent) => {
+      const start = touch.current;
+      touch.current = null;
+      if (!start) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
+    },
+  };
+
   const heading =
     view === 'month' ? monthYear(cursor) : view === 'week' ? weekLabel(range.from, range.to) : fullDate(cursor);
 
@@ -209,95 +228,102 @@ export function CalendarPage() {
         })}
       </div>
 
-      {view === 'month' && (
-        <MonthView
-          cursor={cursor}
-          byDate={byDate}
-          handovers={handovers}
-          rarity={rarity}
-          spans={spans}
-          onOpen={setOpen}
-          shades={shades}
-          selected={selected}
-          onSelect={setSelected}
-          mondayFirst={state.settings.weekStartsMonday}
-        />
-      )}
+      <div {...swipe}>
+        {view === 'month' && (
+          <MonthView
+            cursor={cursor}
+            byDate={byDate}
+            handovers={handovers}
+            rarity={rarity}
+            spans={spans}
+            onOpen={setOpen}
+            shades={shades}
+            selected={selected}
+            onSelect={(d) => {
+              setSelected(d);
+              // a day spilling in from either side takes you to its own month
+              if (!isSameMonth(d, cursor)) setCursor(d);
+            }}
+            mondayFirst={state.settings.weekStartsMonday}
+          />
+        )}
 
-      {view === 'month' && (
-        <section className="section">
-          <div className="daygroup__head" style={{ marginBottom: 6 }}>
-            {relativeDay(selected)}
-          </div>
-          {careEnabled && (
-            <div style={{ marginBottom: 10 }}>
-              <WhosGotTheKids date={selected} onPick={(id) => setMoving(id)} />
+        {view === 'month' && (
+          <section className="section">
+            <div className="daygroup__head" style={{ marginBottom: 6 }}>
+              {relativeDay(selected)}
             </div>
-          )}
-          <div className="card">
-            <HandoverRows handovers={handoversOn(selected)} />
-            {(byDate.get(selected) ?? []).length === 0 ? (
-              handoversOn(selected).length === 0 && <Empty>nothing on.</Empty>
-            ) : (
-              byDate.get(selected)!.map((o) => (
-                <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
-              ))
-            )}
-          </div>
-        </section>
-      )}
-
-      {view === 'week' && (
-        <section className="section">
-          {daysBetween(range.from, range.to).map((d) => (
-            <div key={d} className="weekday">
-              <div className="weekday__head" style={{ '--care-tint': shades.get(d) ?? 'transparent' } as CSSProperties}>
-                <span>{relativeDay(d)}</span>
-                <span className="weekday__right">
-                  {careEnabled && <CareDayLabel date={d} filterChildId={person} />}
-                  {d === today() && <span className="weekday__today">today</span>}
-                </span>
+            {careEnabled && (
+              <div style={{ marginBottom: 10 }}>
+                <WhosGotTheKids date={selected} onPick={(id) => setMoving(id)} />
               </div>
-              <div className="card">
-                <HandoverRows handovers={handoversOn(d)} />
-                {(byDate.get(d) ?? []).length === 0 ? (
-                  handoversOn(d).length === 0 && (
-                    <div className="row muted" style={{ fontSize: 14 }}>
-                      clear
-                    </div>
-                  )
-                ) : (
-                  byDate.get(d)!.map((o) => (
-                    <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
-                  ))
-                )}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {view === 'day' && (
-        <section className="section">
-          {careEnabled && (
-            <div style={{ marginBottom: 10 }}>
-              <WhosGotTheKids date={cursor} onPick={(id) => setMoving(id)} />
-            </div>
-          )}
-          <div className="card">
-            <HandoverRows handovers={handoversOn(cursor)} />
-            {(byDate.get(cursor) ?? []).length === 0 ? (
-              handoversOn(cursor).length === 0 && (
-                <Empty icon="🌤">nothing on {relativeDay(cursor)}.</Empty>
-              )
-            ) : (
-              byDate.get(cursor)!.map((o) => (
-                <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
-              ))
             )}
-          </div>
-        </section>
-      )}
+            <div className="card">
+              <HandoverRows handovers={handoversOn(selected)} />
+              {(byDate.get(selected) ?? []).length === 0 ? (
+                handoversOn(selected).length === 0 && <Empty>nothing on.</Empty>
+              ) : (
+                byDate.get(selected)!.map((o) => (
+                  <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+        {view === 'week' && (
+          <section className="section">
+            {daysBetween(range.from, range.to).map((d) => (
+              <div key={d} className="weekday">
+                <div className="weekday__head" style={{ '--care-tint': shades.get(d) ?? 'transparent' } as CSSProperties}>
+                  <span>{relativeDay(d)}</span>
+                  <span className="weekday__right">
+                    {careEnabled && <CareDayLabel date={d} filterChildId={person} />}
+                    {d === today() && <span className="weekday__today">today</span>}
+                  </span>
+                </div>
+                <div className="card">
+                  <HandoverRows handovers={handoversOn(d)} />
+                  {(byDate.get(d) ?? []).length === 0 ? (
+                    handoversOn(d).length === 0 && (
+                      <div className="row muted" style={{ fontSize: 14 }}>
+                        clear
+                      </div>
+                    )
+                  ) : (
+                    byDate.get(d)!.map((o) => (
+                      <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {view === 'day' && (
+          <section className="section">
+            {careEnabled && (
+              <div style={{ marginBottom: 10 }}>
+                <WhosGotTheKids date={cursor} onPick={(id) => setMoving(id)} />
+              </div>
+            )}
+            <div className="card">
+              <HandoverRows handovers={handoversOn(cursor)} />
+              {(byDate.get(cursor) ?? []).length === 0 ? (
+                handoversOn(cursor).length === 0 && (
+                  <Empty icon="🌤">nothing on {relativeDay(cursor)}.</Empty>
+                )
+              ) : (
+                byDate.get(cursor)!.map((o) => (
+                  <OccurrenceRow key={o.key} occ={o} onClick={() => setOpen(o)} />
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+      </div>
 
       <div className="section" style={{ display: 'flex', gap: 8 }}>
         <button

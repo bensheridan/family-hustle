@@ -706,7 +706,8 @@ function AlternatesField({
 /* ---------------- once a year ---------------- */
 
 const LEAD_CHOICES = [
-  { days: 0, label: 'on the day' },
+  { days: 0, label: "don't remind me" },
+  { days: 1, label: 'the day before' },
   { days: 3, label: '3 days before' },
   { days: 7, label: 'a week before' },
   { days: 14, label: '2 weeks before' },

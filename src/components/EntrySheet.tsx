@@ -52,7 +52,9 @@ export function EntrySheet({ occ, onClose }: { occ: Occurrence; onClose: () => v
           {turning !== undefined && <Chip outline>turns {turning}</Chip>}
           {years !== undefined && <Chip outline>{years} years</Chip>}
           {entry.remindDaysBefore ? (
-            <Chip outline>heads up {entry.remindDaysBefore} days before</Chip>
+            <Chip outline>
+              heads up {entry.remindDaysBefore === 1 ? 'the day' : `${entry.remindDaysBefore} days`} before
+            </Chip>
           ) : null}
         </div>
 

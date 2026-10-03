@@ -11,22 +11,28 @@
 //   openscad -D 'part="body"' -o body.stl house.scad
 //   openscad -D 'part="roof"' -o roof.stl house.scad
 //
-// The board's numbers below are an ESP32-S3-DevKitC-1 with pin headers
-// soldered on. Measure yours (see README.md) — a millimetre matters here.
+// The board's numbers below are the black ESP32-S3 N16R8 board with two
+// USB-C ports (28 mm wide, 63 mm end to end with the ports and antenna), no
+// pin headers soldered, plugged in by its USB-JTAG port. Measure yours (see
+// README.md) — a millimetre matters here.
 
 part = "assembly";  // assembly | body | roof | board
 
 /* [Board] */
-board_l = 69.0;     // along the side with the USB port at one end
-board_w = 25.4;
+board_l = 63.0;     // along the side with the USB port at one end
+board_w = 28.0;
 pcb_t = 1.6;
 // room under the board for pin headers; 3 if yours has none soldered
-under = 9.5;
+under = 3;
 // room above the board for the module, ports and LED
 above = 12;
 // the USB-C port you use, measured from the board's centre line (+ = right
-// when looking at the port end)
-usb_x = 0;
+// when looking at the port end, components up). This board's USB-JTAG port
+// is on the left; its COM port, at +6, is not used.
+usb_x = -6.0;
+// a second port beside it, which overhangs the board's edge like the first
+// and so gets a pocket inside the front wall; 0 for none
+other_usb_x = 6.0;
 usb_w = 9.0;        // USB-C receptacle
 usb_h = 3.2;
 
@@ -135,6 +141,12 @@ module body() {
 
     // inside
     translate([-inner_w / 2, wall, floor_t]) cube([inner_w, inner_l, H]);
+
+    // a pocket inside the front wall for the port that is not used, whose
+    // overhang would otherwise stop the board sitting against the wall
+    if (other_usb_x != 0)
+      translate([other_usb_x - (usb_w + 1) / 2, wall - 0.8, pcb_z + pcb_t - 0.3])
+        cube([usb_w + 1, 0.8 + eps, usb_h + 0.8]);
 
     // the door, through the wall, the frame and the top step
     translate([0, wall + 1, 0]) rotate([90, 0, 0])
@@ -251,11 +263,13 @@ module board() {
     color("#1d5c3a") cube([board_w, board_l, pcb_t]);
     // module with its shield
     color("silver") translate([board_w / 2 - 9, board_l - 25.5, pcb_t]) cube([18, 25.5, 3.1]);
-    // USB-C port, overhanging the edge a little
-    color("gainsboro") translate([board_w / 2 + usb_x - usb_w / 2, -0.6, pcb_t]) cube([usb_w, 7.4, usb_h]);
-    // pin headers underneath
-    color("#222") for (x = [1.27, board_w - 1.27])
-      translate([x - 1.27, 6, -8.5]) cube([2.54, board_l - 12, 8.5]);
+    // USB-C ports, overhanging the edge a little
+    for (x = other_usb_x == 0 ? [usb_x] : [usb_x, other_usb_x])
+      color("gainsboro") translate([board_w / 2 + x - usb_w / 2, -0.6, pcb_t]) cube([usb_w, 7.4, usb_h]);
+    // pin headers underneath, if there is room for them
+    if (under > 8)
+      color("#222") for (x = [1.27, board_w - 1.27])
+        translate([x - 1.27, 6, -8.5]) cube([2.54, board_l - 12, 8.5]);
   }
 }
 

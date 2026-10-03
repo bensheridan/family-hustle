@@ -1,0 +1,13 @@
+# Two filesystems on purpose. `pio run -t uploadfs` writes the app into the
+# LAST data partition of a filesystem subtype, erasing it first, so the app's
+# partition ("spiffs") must stay last. The family lives in "state", which
+# nothing but the firmware ever writes, so updating the app can never take
+# the family with it. Both are mounted by label, so order does not matter to
+# the firmware. guard_partitions.py refuses to build if this order changes.
+#
+# Name,   Type, SubType,  Offset,   Size
+nvs,      data, nvs,      0x9000,   0x5000
+app0,     app,  factory,  0x10000,  0x300000
+state,    data, spiffs,   0x310000, 0xAE0000
+spiffs,   data, spiffs,   0xDF0000, 0x200000
+coredump, data, coredump, 0xFF0000, 0x10000

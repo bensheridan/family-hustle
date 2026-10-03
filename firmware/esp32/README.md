@@ -36,9 +36,15 @@ the serial console the rest of the setup happens in. In the console:
 
 ```
 wifi        → asks for the network name, then the password, then reboots
+scan        → lists the networks the board can see; the saved one is marked *
 tokens      → asks for the write token, then the read token
 status      → shows what it knows
 ```
+
+Typing does not echo in the console; that is normal. If Wi-Fi does not
+connect, the console says why, such as network not found or wrong password.
+`scan` shows whether the name matches exactly. The board only sees 2.4 GHz
+networks.
 
 Make the two tokens on your computer, one at a time:
 

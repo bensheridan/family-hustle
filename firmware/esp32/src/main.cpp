@@ -16,6 +16,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <esp_sntp.h>
 #include <vector>
 #include <algorithm>
 #include "envelope.h"
@@ -95,7 +96,12 @@ String isoNow() {
   return buf;
 }
 
-bool clockIsSet() { return time(nullptr) > 1700000000; }
+// Only trust the clock once NTP has set it. After a reset the RTC can hold
+// anything — a board on the bench read 2031-12-25 with no network at all —
+// so "the time looks recent" is not evidence of anything.
+volatile bool clockSynced = false;
+void onTimeSync(struct timeval*) { clockSynced = true; }
+bool clockIsSet() { return clockSynced; }
 
 // ---- storage ------------------------------------------------------------------
 //
@@ -124,7 +130,7 @@ void pruneHistory() {
 }
 
 void loadState() {
-  stateFS.remove("/state.tmp");  // a write the power cut interrupted
+  if (stateFS.exists("/state.tmp")) stateFS.remove("/state.tmp");  // a write the power cut interrupted
   if (!stateFS.exists("/history")) stateFS.mkdir("/history");
 
   // A power cut between the two renames of a write leaves no state.json;
@@ -137,6 +143,7 @@ void loadState() {
     }
   }
 
+  if (!stateFS.exists("/state.json")) return;
   File f = stateFS.open("/state.json", "r");
   if (!f) return;
   JsonDocument filter;
@@ -285,12 +292,101 @@ Prompt prompt = IDLE;
 String pendingSsid, pendingWrite;
 
 void help() {
-  Serial.println("commands: wifi, tokens, status, reboot");
+  Serial.println("commands: wifi, scan, tokens, status, reboot");
+}
+
+// ---- wi-fi ---------------------------------------------------------------------
+
+// read once at boot; changing it over serial saves and reboots
+String ssidCache;
+String savedSsid() { return ssidCache; }
+
+uint8_t lastDisconnect = 0;
+uint32_t lastAttemptMs = 0;
+static const uint32_t RETRY_WIFI_MS = 20000;
+
+void joinWifi() {
+  String ssid = savedSsid();
+  if (ssid.isEmpty()) return;
+  lastAttemptMs = millis();
+  WiFi.begin(ssid.c_str(), prefs.isKey("pass") ? prefs.getString("pass").c_str() : "");
+}
+
+// Saying "not connected" and nothing else leaves a person guessing between a
+// typo, a wrong password and a 5 GHz network. The reason Wi-Fi gives is
+// usually enough to tell which.
+void onWifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+  if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+    lastDisconnect = 0;
+    Serial.printf("wifi: connected as %s — open http://%s.local/\n", WiFi.localIP().toString().c_str(), HOSTNAME);
+  } else if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+    uint8_t reason = info.wifi_sta_disconnected.reason;
+    if (reason == lastDisconnect) return;  // once per reason, not every retry
+    lastDisconnect = reason;
+    Serial.printf("wifi: could not join \"%s\": %s (%u)\n", savedSsid().c_str(),
+                  WiFi.disconnectReasonName((wifi_err_reason_t)reason), reason);
+    switch (reason) {
+      case WIFI_REASON_NO_AP_FOUND:
+        Serial.println("  the board cannot see that network. it only sees 2.4 GHz — type `scan` to list what it can see.");
+        break;
+      case WIFI_REASON_AUTH_FAIL:
+      case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
+      case WIFI_REASON_HANDSHAKE_TIMEOUT:
+      case WIFI_REASON_802_1X_AUTH_FAILED:
+        Serial.println("  usually the wrong password. type `wifi` to enter it again.");
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+const char* authName(wifi_auth_mode_t a) {
+  switch (a) {
+    case WIFI_AUTH_OPEN: return "open";
+    case WIFI_AUTH_WEP: return "wep";
+    case WIFI_AUTH_WPA_PSK: return "wpa";
+    case WIFI_AUTH_WPA2_PSK: return "wpa2";
+    case WIFI_AUTH_WPA_WPA2_PSK: return "wpa/wpa2";
+    case WIFI_AUTH_WPA2_ENTERPRISE: return "wpa2-enterprise (not supported)";
+    case WIFI_AUTH_WPA3_PSK: return "wpa3";
+    case WIFI_AUTH_WPA2_WPA3_PSK: return "wpa2/wpa3";
+    default: return "other";
+  }
+}
+
+void scan() {
+  Serial.println("scanning…");
+  // the radio will not scan while it is busy joining, so stop trying first
+  WiFi.disconnect(false, false);
+  delay(100);
+  int n = WiFi.scanNetworks();
+  lastAttemptMs = millis();  // and give the scan's results a moment before retrying
+  if (n < 0) {
+    Serial.printf("the scan failed (%d). try again in a few seconds.\n", n);
+    return;
+  }
+  if (n == 0) {
+    Serial.println("no networks found at all. if there are any nearby, check the board's antenna.");
+    return;
+  }
+  String ssid = savedSsid();
+  for (int i = 0; i < n; i++) {
+    Serial.printf("  %s\"%s\"  signal %d dBm  channel %d  %s\n", WiFi.SSID(i) == ssid ? "* " : "  ",
+                  WiFi.SSID(i).c_str(), WiFi.RSSI(i), WiFi.channel(i), authName(WiFi.encryptionType(i)));
+  }
+  if (!ssid.isEmpty()) Serial.println("* = the saved network. names must match exactly, capitals and spaces included.");
+  WiFi.scanDelete();
 }
 
 void status() {
-  Serial.printf("wifi: %s %s\n", WiFi.isConnected() ? "connected" : "not connected",
-                WiFi.isConnected() ? WiFi.localIP().toString().c_str() : "");
+  String ssid = savedSsid();
+  if (ssid.isEmpty()) Serial.println("wifi: not set up — type `wifi`");
+  else if (WiFi.isConnected())
+    Serial.printf("wifi: connected to \"%s\" as %s, signal %d dBm\n", ssid.c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
+  else
+    Serial.printf("wifi: trying \"%s\"%s%s\n", ssid.c_str(), lastDisconnect ? " — last failure: " : "",
+                  lastDisconnect ? WiFi.disconnectReasonName((wifi_err_reason_t)lastDisconnect) : "");
   Serial.printf("tokens: %s\n", writeToken.length() >= 32 && readToken.length() >= 32 ? "set" : "NOT SET");
   Serial.printf("clock: %s\n", clockIsSet() ? isoNow().c_str() : "not set yet");
   Serial.printf("family: version %u%s\n", version, version ? (", by " + updatedBy).c_str() : "");
@@ -348,6 +444,8 @@ void onLine(String line) {
     Serial.println("write token:");
   } else if (line == "status") {
     status();
+  } else if (line == "scan") {
+    scan();
   } else if (line == "reboot") {
     ESP.restart();
   } else if (line.length()) {
@@ -365,24 +463,25 @@ void setup() {
   if (!psramFound()) Serial.println("WARNING: no PSRAM — writes larger than a few KB will fail");
 
   prefs.begin("hustle", false);
-  writeToken = prefs.getString("write", "");
-  readToken = prefs.getString("read", "");
+  writeToken = prefs.isKey("write") ? prefs.getString("write") : "";
+  readToken = prefs.isKey("read") ? prefs.getString("read") : "";
 
   if (!LittleFS.begin(false)) Serial.println("app filesystem missing — run `pio run -t uploadfs`");
   if (!stateFS.begin(true, "/state", 10, "state")) Serial.println("ERROR: could not mount the state partition");
   loadState();
 
-  String ssid = prefs.getString("ssid", "");
-  if (ssid.isEmpty()) {
+  ssidCache = prefs.isKey("ssid") ? prefs.getString("ssid") : "";
+  WiFi.mode(WIFI_STA);  // also needed for `scan` before any network is saved
+  WiFi.setHostname(HOSTNAME);
+  WiFi.onEvent(onWifiEvent);
+  if (savedSsid().isEmpty()) {
     Serial.println("no wi-fi yet. type `wifi` to set it up.");
   } else {
-    WiFi.mode(WIFI_STA);
-    WiFi.setHostname(HOSTNAME);
-    WiFi.setAutoReconnect(true);
-    WiFi.begin(ssid.c_str(), prefs.getString("pass", "").c_str());
+    joinWifi();
     for (int i = 0; i < 40 && !WiFi.isConnected(); i++) delay(250);
   }
 
+  sntp_set_time_sync_notification_cb(onTimeSync);
   configTzTime("UTC0", "pool.ntp.org", "time.google.com");
   MDNS.begin(HOSTNAME);
   MDNS.addService("http", "tcp", 80);
@@ -403,6 +502,10 @@ void setup() {
 }
 
 void loop() {
+  // keep trying: a router that reboots, or a box that came up first, should
+  // not need anyone to touch it
+  if (!WiFi.isConnected() && !savedSsid().isEmpty() && millis() - lastAttemptMs > RETRY_WIFI_MS) joinWifi();
+
   static String line;
   while (Serial.available()) {
     char c = Serial.read();

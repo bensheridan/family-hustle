@@ -65,6 +65,27 @@ If `.local` does not resolve on someone's phone (some Android versions), give
 the box a fixed address in the router and use that instead. `status` prints
 the address it has.
 
+## The light
+
+The board's RGB LED shows how the box is, through the house's attic window if
+it is in [the case](case/):
+
+| light | means |
+| --- | --- |
+| warm glow | holding the family and ready |
+| brighter warm flash, fading | a phone just saved a change |
+| slow blue breathing | no family on the box yet |
+| slow amber breathing | not on Wi-Fi, or the clock is not set yet, so saves would fail |
+
+It is dim on purpose, since it is on all night. In the console:
+
+```
+led            show each colour, to check the light works
+led pin 38     if nothing lights: 48 on most boards, 38 on a DevKitC-1 v1.1
+led 40         a brighter glow (0-255, default 18)
+led off        dark; `led on` to bring it back
+```
+
 ## Updating the app
 
 ```bash

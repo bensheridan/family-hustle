@@ -21,6 +21,7 @@
 #include <vector>
 #include <algorithm>
 #include "envelope.h"
+#include "light.h"
 
 static const size_t MAX_BODY = 512 * 1024;
 static const uint32_t MIN_WRITE_GAP_MS = 2000;
@@ -272,6 +273,7 @@ int put(AsyncWebServerRequest* req) {
   updatedAt = at;
   updatedBy = by;
   pruneHistory();
+  light::saved();
 
   JsonDocument res;
   res["version"] = next;
@@ -296,7 +298,11 @@ Prompt prompt = IDLE;
 String pendingSsid, pendingWrite;
 
 void help() {
-  Serial.println("commands: wifi, scan, tokens, status, reboot");
+  Serial.println("commands: wifi, scan, tokens, status, led, reboot");
+  Serial.println("  led            show each colour, to check the light works");
+  Serial.println("  led pin <n>    the LED's GPIO: 48 on most boards, 38 on a DevKitC-1 v1.1");
+  Serial.println("  led <0-255>    how bright the steady glow is (default 18)");
+  Serial.println("  led on|off");
 }
 
 // ---- wi-fi ---------------------------------------------------------------------
@@ -416,6 +422,7 @@ void status() {
   Serial.printf("storage: %u of %u KB used, %u versions of history\n", (unsigned)(stateFS.usedBytes() / 1024),
                 (unsigned)(stateFS.totalBytes() / 1024), (unsigned)historyVersions().size());
   Serial.printf("psram free: %u KB\n", (unsigned)(ESP.getFreePsram() / 1024));
+  Serial.printf("light: %s, GPIO%u, glow %u\n", light::enabled ? "on" : "off", light::pin, light::glow);
 }
 
 void onLine(String line) {
@@ -467,6 +474,35 @@ void onLine(String line) {
     Serial.println("write token:");
   } else if (line == "status") {
     status();
+  } else if (line == "led") {
+    light::test();
+  } else if (line.startsWith("led ")) {
+    String arg = line.substring(4);
+    arg.trim();
+    if (arg == "on" || arg == "off") {
+      light::enabled = arg == "on";
+      if (!light::enabled) light::off();
+      prefs.putBool("led_on", light::enabled);
+    } else if (arg.startsWith("pin ")) {
+      int p = arg.substring(4).toInt();
+      if (p <= 0 || p > 48) {
+        Serial.println("pin must be 1–48");
+        return;
+      }
+      light::off();
+      light::pin = p;
+      prefs.putUChar("led_pin", p);
+      light::test();
+    } else {
+      int g = arg.toInt();
+      if (g < 0 || g > 255 || (g == 0 && arg != "0")) {
+        help();
+        return;
+      }
+      light::glow = g;
+      prefs.putUChar("led_glow", g);
+    }
+    Serial.printf("light: %s, GPIO%u, glow %u\n", light::enabled ? "on" : "off", light::pin, light::glow);
   } else if (line == "scan") {
     scan();
   } else if (line == "reboot") {
@@ -486,6 +522,11 @@ void setup() {
   if (!psramFound()) Serial.println("WARNING: no PSRAM — writes larger than a few KB will fail");
 
   prefs.begin("hustle", false);
+  light::pin = prefs.getUChar("led_pin", 48);
+  light::glow = prefs.getUChar("led_glow", 18);
+  light::enabled = prefs.getBool("led_on", true);
+  light::off();
+
   writeToken = prefs.isKey("write") ? prefs.getString("write") : "";
   readToken = prefs.isKey("read") ? prefs.getString("read") : "";
 
@@ -525,6 +566,10 @@ void setup() {
 }
 
 void loop() {
+  light::update(!WiFi.isConnected() || !clockIsSet() ? light::NOT_READY
+                : version == 0                       ? light::EMPTY
+                                                     : light::HOME);
+
   // keep trying: a router that reboots, or a box that came up first, should
   // not need anyone to touch it
   if (!WiFi.isConnected() && !savedSsid().isEmpty() && millis() - lastAttemptMs > RETRY_WIFI_MS) joinWifi();

@@ -6,6 +6,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "sync-box",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "sync:dev"],
+      "port": 8787
+    },
+    {
+      "name": "family-hustle-hub",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "FH_TARGET=hub FH_SYNC_PROXY=http://127.0.0.1:8787 npx vite --port 5174 --strictPort"],
+      "port": 5174
     }
   ]
 }

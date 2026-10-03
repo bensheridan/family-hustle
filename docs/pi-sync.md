@@ -56,8 +56,9 @@ leaves the page. There is no HTTP mode, not even for testing from the phone.
 **No port forwarding.** Do not open a port on the home router, and do not
 touch the router at all. Use a **Cloudflare Tunnel** (`cloudflared`), which
 gives an HTTPS hostname, a certificate, and no inbound holes. Tailscale would
-also be private and secure, but a co-parent in another household could not
-reach it, and that is a likely next step — so the tunnel.
+also be private and secure, but every phone would need the Tailscale app and
+an account before it could sync — so the tunnel. (Reaching a co-parent in
+another household would also need it, but that is not a goal right now.)
 
 **The stored format is the app's own backup format.** Do not invent a schema.
 The app already exports exactly this, defined in `src/domain/backup.ts`:
@@ -144,8 +145,20 @@ on a port. Do not install anything yet.
 
 ### 2. The service
 
-Somewhere sensible like `/opt/family-hustle-sync`, a small Node HTTP service
-implementing the contract. No framework is needed; if you want one, Express is
+**The service is already written**: `server/sync-server.ts` in the repo,
+bundled to one dependency-free file with `npm run build:server`
+(`dist-server/sync-server.mjs`). It passes `npm run test:sync`, which checks
+everything in this section except the power-cut behaviour. Deploy that file
+rather than writing a new one, and report anything in it that does not match
+this section. It takes the path of `config.json` as its argument and reads
+`port`, `host`, `dataDir`, `origins` and `tokens` from it.
+
+It also answers `429` to a second write within two seconds. That status is
+not in the contract above; the app treats it as "try again later".
+
+What it implements, for checking: somewhere sensible like
+`/opt/family-hustle-sync`, a small Node HTTP service implementing the
+contract. No framework is needed; if you want one, Express is
 fine and anything larger is not.
 
 - Listen on `127.0.0.1` only. The tunnel reaches it; nothing else should.

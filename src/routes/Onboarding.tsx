@@ -6,8 +6,10 @@ import { Avatar, Chip, FieldGroup, Toggle } from '../components/ui';
 import { PERSON_COLOURS, colourVar } from '../domain/categories';
 import { parseBackup, type BackupSummary } from '../domain/backup';
 import type { HouseholdMode, Person, PersonRole, State } from '../types';
+import { useSync } from '../state/sync';
+import { IS_HUB, defaultDeviceName } from '../lib/sync';
 
-type Step = 'welcome' | 'people' | 'setup' | 'work' | 'done';
+type Step = 'welcome' | 'join' | 'people' | 'setup' | 'work' | 'done';
 
 export function Onboarding() {
   const { state, dispatch } = useStore();
@@ -37,7 +39,12 @@ export function Onboarding() {
           }}
           onDemo={finish}
           onLoad={load}
+          onJoin={() => setStep('join')}
         />
+      )}
+
+      {step === 'join' && (
+        <Join onJoined={() => navigate('/', { replace: true })} onBack={() => setStep('welcome')} />
       )}
 
       {step === 'people' && (
@@ -63,10 +70,12 @@ function Welcome({
   onStart,
   onDemo,
   onLoad,
+  onJoin,
 }: {
   onStart: () => void;
   onDemo: () => void;
   onLoad: (state: State) => void;
+  onJoin: () => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [found, setFound] = useState<{ state: State; summary: BackupSummary } | null>(null);
@@ -155,8 +164,84 @@ function Welcome({
           >
             open a family I’ve saved
           </button>
+          <button type="button" className="btn btn--quiet btn--block" onClick={onJoin}>
+            join my family’s box
+          </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/* Someone else in the family already set it up; this phone only needs the
+ * token. Their family arrives whole, so there is nothing to set up here. */
+function Join({ onJoined, onBack }: { onJoined: () => void; onBack: () => void }) {
+  const { join } = useSync();
+  const [url, setUrl] = useState('');
+  const [token, setToken] = useState('');
+  const [error, setError] = useState<string>();
+  const [working, setWorking] = useState(false);
+
+  const submit = async () => {
+    setError(undefined);
+    setWorking(true);
+    const failed = await join({
+      url: IS_HUB ? '' : url.trim(),
+      token: token.trim(),
+      device: defaultDeviceName(),
+    });
+    setWorking(false);
+    if (failed) setError(failed);
+    else onJoined();
+  };
+
+  return (
+    <div className="onb__pane">
+      <h1 className="onb__headline">join your family</h1>
+      <p className="onb__lede">
+        ask whoever set up the box for a token. it goes in once, and stays on this phone.
+      </p>
+      {!IS_HUB && (
+        <label className="field">
+          <span className="field__label">the box’s address</span>
+          <input
+            className="input"
+            type="url"
+            inputMode="url"
+            autoCapitalize="off"
+            autoCorrect="off"
+            placeholder="https://hustle.example.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+        </label>
+      )}
+      <label className="field">
+        <span className="field__label">token</span>
+        <input
+          className="input"
+          type="password"
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+        />
+      </label>
+      {error && <p className="importwarn">{error}</p>}
+      <div className="onb__actions">
+        <button
+          type="button"
+          className="btn btn--accent btn--block"
+          disabled={working || !token.trim() || (!IS_HUB && !url.trim())}
+          onClick={() => void submit()}
+        >
+          {working ? 'joining…' : 'join'}
+        </button>
+        <button type="button" className="btn btn--quiet btn--block" onClick={onBack}>
+          back
+        </button>
+      </div>
     </div>
   );
 }

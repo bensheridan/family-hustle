@@ -3,3 +3,8 @@ dist
 .DS_Store
 *.local
 .test-build
+dist-hub
+dist-server
+firmware/esp32/.pio
+firmware/esp32/data/www
+.sync-dev

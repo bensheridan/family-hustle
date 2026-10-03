@@ -14,6 +14,18 @@ export function SyncSettings() {
 
   if (!record.config) return <ConnectForm />;
 
+  /* Turned away by the box — a token mistyped, or changed on the box. The
+   * only way out used to be "stop syncing", then connect again, which nobody
+   * would guess; so ask for the token again, right here. */
+  if (status === 'unauthorised') {
+    return (
+      <ConnectForm
+        previous={record.config}
+        notice="the box doesn’t accept this phone’s token. enter it again — check for a stray space at either end."
+      />
+    );
+  }
+
   const last = record.last;
   return (
     <div className="card card--pad">
@@ -55,11 +67,11 @@ export function SyncSettings() {
   );
 }
 
-function ConnectForm() {
+function ConnectForm({ previous, notice }: { previous?: SyncConfig; notice?: string }) {
   const { connect } = useSync();
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(previous?.url ?? '');
   const [token, setToken] = useState('');
-  const [device, setDevice] = useState(defaultDeviceName);
+  const [device, setDevice] = useState(previous?.device ?? defaultDeviceName());
   const [error, setError] = useState<string>();
   const [working, setWorking] = useState(false);
 
@@ -75,6 +87,7 @@ function ConnectForm() {
 
   return (
     <div className="card card--pad">
+      {notice && <p className="importwarn" style={{ marginTop: 0 }}>{notice}</p>}
       {!IS_HUB && (
         <Field label="the box’s address" hint="starts with https://">
           <input

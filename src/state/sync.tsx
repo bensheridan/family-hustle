@@ -26,7 +26,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useStore } from './store';
+import { migrate, useStore } from './store';
 import { readBackup, type BackupSummary } from '../domain/backup';
 import {
   adopt,
@@ -119,7 +119,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const apply = useCallback(
     (remote: Remote, remoteState: State) => {
-      const next = adopt(remoteState, stateRef.current);
+      // filled in before fingerprinting, so it matches what the store holds
+      const next = migrate(adopt(remoteState, stateRef.current));
       stateRef.current = next;
       dispatch({ type: 'reset', state: next });
       update({

@@ -7,8 +7,9 @@
  *   FH_SYNC_URL=http://family-hustle.local FH_WRITE_TOKEN=… FH_READ_TOKEN=… \
  *     npm run test:sync
  *
- * Against a real box this writes one test version on top of whatever is
- * there; the family's document is restored at the end, as a new version.
+ * Against a real box this writes one test version on top of the family's,
+ * then restores the family's document as a new version. It refuses to run
+ * against an empty box, where there would be nothing to restore.
  *
  * Run with: npm run test:sync */
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -73,12 +74,15 @@ async function currentVersion(): Promise<{ version: number; text?: string }> {
 }
 
 /* Formatted on purpose — indentation, an escaped character, a 1.50 — so a
- * server that re-serialises instead of storing the bytes is caught. */
+ * server that re-serialises instead of storing the bytes is caught. Its
+ * state is deliberately not a family (no people, no calendar), so a phone
+ * that syncs while the test runs refuses it instead of adopting it — on the
+ * first run against a real box, a phone joined in that window and crashed. */
 const document = `{
   "app": "family-hustle",
   "format": 1,
   "savedAt": "2026-10-03T08:00:00.000Z",
-  "state": { "people": [ { "name": "Ren\\u00e9e", "ratio": 1.50 } ], "entries": [] }
+  "state": { "contractTest": "Ren\\u00e9e", "ratio": 1.50 }
 }`;
 
 const putBody = (expectedVersion: number, doc = document) =>
@@ -99,6 +103,15 @@ async function run() {
 
   const before = await currentVersion();
   if (local) check('nothing stored yet → 204', before.version === 0);
+  if (!local && before.version === 0) {
+    /* With nothing on the box there is nothing to put back afterwards, and
+     * the test's own document would be left there for the family's phones
+     * to pick up — which happened on the first run against a real box. */
+    throw new Error(
+      'the box is empty. put the family on it from the writing phone first, then run this — ' +
+        'the test restores what was there, and with nothing there it would leave its own document behind.',
+    );
+  }
 
   check('PUT with the read token → 403', (await put(readToken, putBody(before.version))).status === 403);
 

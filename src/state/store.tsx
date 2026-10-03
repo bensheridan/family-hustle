@@ -19,7 +19,7 @@ import type {
   State,
   Template,
 } from '../types';
-import { seedState } from '../data/seed';
+import { blankState, seedState } from '../data/seed';
 import { viewingHousehold } from '../domain/care';
 import { birthdayEntries } from '../domain/birthdays';
 import { holidayEntries } from '../domain/holidays';
@@ -240,7 +240,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, lastTemplate: action.template };
 
     case 'reset':
-      return action.state;
+      // a family arriving from a file or the sync box gets the same
+      // filling-in as one loaded from storage — rendering one that lacks a
+      // field crashes the whole app to a blank page
+      return migrate(action.state);
   }
 }
 
@@ -258,10 +261,15 @@ function load(): State {
 }
 
 /** Saved state predates shared care, so fill in what it is missing rather
- *  than throwing the family's data away. */
-function migrate(state: State): State {
+ *  than throwing the family's data away. Also the guard for anything
+ *  arriving from outside — a file, or the sync box. */
+export function migrate(state: State): State {
+  const blank = blankState();
+  const households = state.households?.length ? state.households : blank.households;
   return {
     ...state,
+    settings: { ...blank.settings, ...state.settings },
+    entries: state.entries ?? [],
     schoolTerms: state.schoolTerms ?? [],
     publicHolidays: state.publicHolidays ?? [],
     // schedules saved before this applied to children only
@@ -269,14 +277,14 @@ function migrate(state: State): State {
       ...c,
       personId: c.personId ?? (c as unknown as { childId?: Id }).childId,
     })),
-    households: (state.households ?? []).map((h, i) => ({
+    households: households.map((h, i) => ({
       ...h,
       colour: h.colour ?? (i === 0 ? ('purple' as const) : ('teal' as const)),
     })),
     // anyone saved before homes were assignable lives at the first one
     people: (state.people ?? []).map((p) => ({
       ...p,
-      householdId: p.householdId ?? state.households?.[0]?.id,
+      householdId: p.householdId ?? households[0].id,
     })),
   };
 }

@@ -17,6 +17,7 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include <esp_sntp.h>
+#include <esp_system.h>
 #include <vector>
 #include <algorithm>
 #include "envelope.h"
@@ -100,7 +101,10 @@ String isoNow() {
 // anything — a board on the bench read 2031-12-25 with no network at all —
 // so "the time looks recent" is not evidence of anything.
 volatile bool clockSynced = false;
-void onTimeSync(struct timeval*) { clockSynced = true; }
+void onTimeSync(struct timeval*) {
+  if (!clockSynced) Serial.println("clock: set from the network");
+  clockSynced = true;
+}
 bool clockIsSet() { return clockSynced; }
 
 // ---- storage ------------------------------------------------------------------
@@ -379,7 +383,26 @@ void scan() {
   WiFi.scanDelete();
 }
 
+// Why the board last started. A box that restarts by itself is a problem
+// worth seeing at once — and a deliberate restart should not look like one.
+const char* lastRestart() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "power on";
+    case ESP_RST_SW: return "restarted on purpose (wifi setup or `reboot`)";
+    case ESP_RST_PANIC: return "CRASHED";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT: return "HUNG (watchdog)";
+    case ESP_RST_BROWNOUT: return "power dipped (brownout) — try another cable or supply";
+    case ESP_RST_DEEPSLEEP: return "woke from sleep";
+    // this SDK has no code of its own for a reset over USB, which is what
+    // flashing and opening the console do
+    default: return "reset over USB, or unknown — normal right after flashing";
+  }
+}
+
 void status() {
+  Serial.printf("last start: %s, up %lu min\n", lastRestart(), (unsigned long)(millis() / 60000));
   String ssid = savedSsid();
   if (ssid.isEmpty()) Serial.println("wifi: not set up — type `wifi`");
   else if (WiFi.isConnected())

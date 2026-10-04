@@ -8,3 +8,4 @@ dist-server
 firmware/esp32/.pio
 firmware/esp32/data/www
 .sync-dev
+brag-output*/

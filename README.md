@@ -8,7 +8,8 @@ appointments, work, shift rosters and an optional shared-care setup, in one
 place — plus a monthly export you can actually stick on the fridge.
 
 This repository is the working prototype. It runs entirely in the browser and
-stores everything in `localStorage`; there is no backend yet.
+stores everything in `localStorage`. The only backend is optional: a sync box
+the family owns (see below).
 
 **Try it:** https://bensheridan.github.io/family-hustle/ — open the demo family
 and have a look around. Everything you do stays in your own browser, so you
@@ -29,7 +30,15 @@ npm run typecheck    # tsc, no emit
 npm run build        # typecheck + production build
 npm run preview      # serve the build
 npm run test:roster  # roster import, against the screen it was built from
+npm run test:sync    # the sync server, against its contract
+npm run build:hub    # the build a family's sync box serves itself
+npm run build:server # the sync server, as one file for a Pi
 ```
+
+**Sharing between phones.** A family can keep their data on a small box they
+own: an ESP32 at home, or a Raspberry Pi reachable from anywhere. Both speak
+the same contract, and the app talks to either. See
+[docs/sync-boxes.md](docs/sync-boxes.md).
 
 ## What is built
 

@@ -59,7 +59,12 @@ export function parseBackup(text: string): ParseResult {
   } catch {
     return { ok: false, error: 'that file is not readable as JSON.' };
   }
+  return readBackup(data);
+}
 
+/** The same checks for a document that arrived already parsed — from the
+ *  sync server rather than a file. */
+export function readBackup(data: unknown): ParseResult {
   if (typeof data !== 'object' || data === null) {
     return { ok: false, error: 'that file does not contain a backup.' };
   }

@@ -18,6 +18,8 @@ import {
   type WritableHandle,
 } from '../lib/fileHandle';
 import { SectionHead } from '../components/ui';
+import { SyncSettings } from '../components/SyncSettings';
+import { useSync } from '../state/sync';
 import type { State } from '../types';
 
 /** The family's data, as a file they keep.
@@ -29,6 +31,7 @@ import type { State } from '../types';
  */
 export function Data() {
   const { state, dispatch } = useStore();
+  const { record } = useSync();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -142,13 +145,19 @@ export function Data() {
           {here.holidays > 0 ? ` · ${here.holidays} public holidays` : ''}
         </div>
         <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
-          right now this lives only in this browser, on this device. clearing your browsing data
-          would take it with it.
+          {record.config
+            ? 'this lives in this browser and on your family’s box. either one can bring it back.'
+            : 'right now this lives only in this browser, on this device. clearing your browsing data would take it with it.'}
         </p>
       </div>
 
       {status && <p className="databanner">{status}</p>}
       {error && <p className="importwarn">{error}</p>}
+
+      <section className="section">
+        <SectionHead title="share with the family’s box" />
+        <SyncSettings />
+      </section>
 
       <section className="section">
         <SectionHead title="save a copy" />
